@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vùng Đất Cấm — The Forbidden Land</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&display=swap&subset=vietnamese" rel="stylesheet">
+<style>
+:root{--ink:#0c0b0e;--panel:rgba(14,12,16,.88);--line:#3b3029;--text:#d9cfbd;--dim:#8f8576;--gold:#c9a55a;--blood:#b3352a;--ice:#9fc3d8;}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#07070a;color:var(--text);font-family:'Cormorant Garamond',Georgia,serif}
+#stage canvas{display:block}
+.mono{font-family:'IBM Plex Mono',monospace}
+button{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);background:#1a1519;border:1px solid var(--line);padding:7px 11px;cursor:pointer;letter-spacing:.04em}
+button:hover{border-color:var(--gold);color:#fff}
+#loading{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#060608;z-index:50;text-align:center}
+#loading h1{font-size:54px;margin:0;letter-spacing:.08em;color:#e8dcc4}
+#loading p{color:var(--dim);font-style:italic;margin:6px 0 0}
+#topbar{position:fixed;top:0;left:0;right:0;display:flex;gap:10px;align-items:center;padding:10px 14px;background:linear-gradient(#000c,#0000);z-index:10;flex-wrap:wrap}
+#topbar .title{font-size:24px;font-weight:700;letter-spacing:.06em;margin-right:10px}
+#topbar .title small{font-size:14px;color:var(--dim);font-style:italic;font-weight:500;margin-left:6px}
+#legend{position:fixed;left:14px;top:64px;width:250px;max-height:calc(100% - 140px);overflow:auto;background:var(--panel);border:1px solid var(--line);padding:10px 12px;z-index:9;font-size:15px}
+#legend h3{margin:8px 0 2px;font-size:13px;font-family:'IBM Plex Mono',monospace;color:var(--gold);letter-spacing:.08em;text-transform:uppercase}
+#legend .ri{display:flex;align-items:center;gap:7px;cursor:pointer;padding:1px 0}
+#legend .ri:hover{color:#fff}
+#legend .sw{width:11px;height:11px;border:1px solid #0008;flex:none}
+#legend .note{color:var(--dim);font-size:13px;font-style:italic;margin-top:8px}
+#mapHelp{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--dim);background:var(--panel);border:1px solid var(--line);padding:6px 12px;z-index:9;text-align:center;max-width:calc(100% - 32px)}
+#labels{position:fixed;inset:0;pointer-events:none;z-index:5}
+.lbl{position:absolute;left:0;top:0;font-size:15px;font-weight:700;color:#efe4cc;text-shadow:0 0 4px #000,0 0 8px #000;white-space:nowrap;letter-spacing:.05em}
+.lbl.mono{font-size:10px;color:var(--gold);font-weight:400}
+.lbl.margin{color:#ffd9f0;font-size:11px;font-style:italic}
+#tag{position:fixed;z-index:20;display:none;background:#0d0b0fee;border:1px solid var(--gold);color:#f1e6cf;padding:4px 10px 5px;font-size:15px;cursor:pointer;white-space:nowrap;box-shadow:0 0 14px #000}
+#tag:hover{background:#2a1d14;border-color:#e9c27a}
+#tag small{color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:10px;margin-left:6px}
+/* codex */
+#codex{position:fixed;inset:0;background:#000b;z-index:40;display:none;align-items:center;justify-content:center;padding:16px}
+#codex.open{display:flex}
+.cx-card{position:relative;width:min(980px,100%);max-height:100%;overflow:auto;background:linear-gradient(#17131a,#0e0c10);border:1px solid #5a4630;box-shadow:0 0 60px #000,inset 0 0 80px #0008;padding:20px 22px}
+.cx-card:before{content:"";position:absolute;inset:6px;border:1px solid #3a2e22;pointer-events:none}
+#cx-close{position:absolute;right:14px;top:12px;z-index:2}
+#cx-cls{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--blood);letter-spacing:.12em;text-transform:uppercase}
+#cx-name{margin:2px 0 2px;font-size:34px;color:#f0e3c8;line-height:1.05}
+#cx-sub{color:var(--dim);font-style:italic}
+.cx-body{display:flex;gap:20px;margin-top:14px;flex-wrap:wrap}
+.cx-view{flex:1 1 360px;min-width:260px;position:relative;border:1px solid var(--line);background:radial-gradient(#221c22,#08070a)}
+#cx-canvas{width:100%;height:340px;display:block;cursor:grab}
+.cx-hint{position:absolute;bottom:6px;left:8px;font-size:10px;color:var(--dim);font-family:'IBM Plex Mono',monospace}
+.cx-text{flex:1 1 380px;font-size:17px;line-height:1.38}
+.cx-text dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 10px;font-size:15px}
+.cx-text dt{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:.06em;padding-top:3px}
+.cx-text dd{margin:0}
+.cx-text h4{margin:12px 0 2px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase}
+.cx-text p{margin:0}
+#cx-counter{color:#e7d3a6}
+.cx-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+/* HUD */
+#hud{position:fixed;inset:0;pointer-events:none;z-index:8;display:none}
+#cross{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px}
+#cross:before,#cross:after{content:"";position:absolute;background:#e8dcc4b0}
+#cross:before{left:8px;top:2px;width:2px;height:14px}#cross:after{top:8px;left:2px;height:2px;width:14px}
+#cross.hit:before,#cross.hit:after{background:#ff4a3a}
+#fptag{position:absolute;left:50%;top:calc(50% + 22px);transform:translateX(-50%);font-size:16px;color:#f0e5cc;text-shadow:0 0 5px #000;white-space:nowrap}
+#fptag small{font-family:'IBM Plex Mono',monospace;color:var(--gold);font-size:11px}
+#bars{position:absolute;left:18px;bottom:18px;width:240px;font-family:'IBM Plex Mono',monospace;font-size:10px}
+.bar{height:9px;background:#0009;border:1px solid #fff2;margin:3px 0 7px}
+.bar i{display:block;height:100%}
+#hp i{background:#a8322a}#sn i{background:#6d63b8}#st i{background:#b8a36a}
+#weap{position:absolute;right:18px;bottom:18px;display:flex;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:12px}
+#weap div{border:1px solid #fff3;padding:6px 10px;background:#0008}
+#weap div.on{border-color:var(--gold);color:#fff}
+#region{position:absolute;top:58px;left:50%;transform:translateX(-50%);text-align:center;text-shadow:0 0 6px #000}
+#region b{font-size:26px;letter-spacing:.06em;display:block}
+#region span{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim)}
+#prompt{position:absolute;left:50%;bottom:90px;transform:translateX(-50%);font-family:'IBM Plex Mono',monospace;font-size:13px;color:#f3e7cd;text-shadow:0 0 4px #000}
+#warn{position:absolute;left:50%;top:30%;transform:translateX(-50%);font-size:44px;font-weight:700;color:#e23b2e;letter-spacing:.12em;text-shadow:0 0 12px #f00a;opacity:0;white-space:nowrap}
+#fpHelp{position:absolute;right:18px;top:60px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#cfc4b0b0;text-align:right;line-height:1.6}
+#vignette{position:absolute;inset:0;background:radial-gradient(ellipse at center,#0000 45%,#000 100%);opacity:.35}
+#bloodv{position:absolute;inset:0;background:radial-gradient(ellipse at center,#0000 50%,#7a0000 120%);opacity:0}
+#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:7;image-rendering:pixelated;mix-blend-mode:screen;opacity:0}
+#scan{position:fixed;inset:0;pointer-events:none;z-index:7;opacity:0;background:repeating-linear-gradient(0deg,#0000 0 2px,#0006 2px 3px)}
+#vhs{position:fixed;left:24px;top:60px;z-index:8;font-family:'IBM Plex Mono',monospace;font-size:20px;color:#fff;text-shadow:2px 0 #f00,-2px 0 #0ff;opacity:0;pointer-events:none}
+#pause,#death{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;flex-direction:column;background:#000a;text-align:center;padding:16px}
+#pause h2,#death h2{font-size:40px;margin:0 0 6px}
+#death h2{color:#c8392c}
+#pause p,#death p{color:var(--dim);font-style:italic;margin:0 0 14px}
+@media (max-width:700px){#legend{display:none}#topbar .title{font-size:18px}}
+</style>
+</head>
+<body>
+<div id="loading"><h1>Vùng Đất Cấm</h1><p>The Forbidden Land — carving the Wheel from a collapsed magma dome…</p></div>
+<div id="stage"></div>
+<div id="labels"></div>
+<canvas id="fx" width="240" height="135"></canvas>
+<div id="scan"></div>
+<div id="vhs">▶ PLAY&nbsp;&nbsp;<span id="vhsT">00:00:00</span><br><small>TRACKING ERR</small></div>
+
+<div id="topbar">
+  <div class="title">Vùng Đất Cấm<small>The Forbidden Land · Atlas</small></div>
+  <button id="bAtlas">⟲ Whole Wheel</button>
+  <button id="bDescend">⇣ Descend at Kraghaven</button>
+  <button id="bLabels">Labels [L]</button>
+  <button id="bNight">Dusk / Day</button>
+</div>
+<div id="legend"></div>
+<div id="mapHelp">Hover anything for its name · <b>click the name tag</b> to open the Lore Codex · drag rotate · right-drag pan · wheel zoom · double-click ground to descend</div>
+<div id="tag"></div>
+
+<div id="hud">
+  <div id="vignette"></div><div id="bloodv"></div>
+  <div id="region"><b id="regName">—</b><span id="regSub"></span></div>
+  <div id="cross"></div><div id="fptag"></div>
+  <div id="warn"></div>
+  <div id="prompt"></div>
+  <div id="bars">HEALTH<div class="bar" id="hp"><i></i></div>SANITY<div class="bar" id="sn"><i></i></div>STAMINA<div class="bar" id="st"><i></i></div><span id="clock"></span></div>
+  <div id="weap"><div id="w1">[1] Iron Sword</div><div id="w2">[2] Hunting Bow</div></div>
+  <div id="fpHelp">WASD move · Shift sprint · Space jump<br>LMB slash / hold-release to shoot<br>[1] sword [2] bow · [F] board/leave sampan<br>[E] codex of targeted thing · [N] pass time<br>[M] return to Atlas</div>
+</div>
+<div id="pause"><h2>Paused</h2><p>Click to return to the land · [M] Atlas</p><button id="bResume">Resume</button></div>
+<div id="death"><h2 id="deathT">You were claimed.</h2><p id="deathP"></p><button id="bRespawn">Return to the Atlas</button></div>
+
+<div id="codex"><div class="cx-card">
+  <button id="cx-close">✕ Close</button>
+  <div id="cx-cls"></div><h2 id="cx-name"></h2><div id="cx-sub"></div>
+  <div class="cx-body">
+    <div class="cx-view"><canvas id="cx-canvas"></canvas><div class="cx-hint">drag to rotate · wheel to zoom</div></div>
+    <div class="cx-text">
+      <dl><dt>Classification</dt><dd id="cx-c"></dd><dt>Ring / Sector</dt><dd id="cx-r"></dd><dt>Language Zone</dt><dd id="cx-l"></dd></dl>
+      <p id="cx-desc"></p>
+      <h4>Habits &amp; Rules</h4><p id="cx-habits"></p>
+      <h4>Countermeasures</h4><p id="cx-counter"></p>
+    </div>
+  </div>
+  <div class="cx-actions"><button id="cx-zoom">⌖ Zoom to region</button><button id="cx-descend">⇣ Descend here (first-person)</button></div>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+'use strict';
+/* =====================================================================
+   VÙNG ĐẤT CẤM — constants, noise, helpers
+   ===================================================================== */
+const DEG=Math.PI/180;
+const RC=140,RI=350,RM=600,RO=900,RSTAR=1400,RMARG=1450,WORLD=1700;
+const OUTER=['Gremvang','Kjølmyr','Hrimmark','Valen','Kessaren','Thalenis'];
+const MIDDLE=['Dvelskarn','Nyrkvøld','Hjarnvang','Sarrobren','Halorren','Nerith'];
+const INNER=['Hveskgruv','Iskhjarn','Thaal-Uresh','Vaar-Ithun','Kaurath','Ur-Keth'];
+const ROMAN=['I','II','III','IV','V','VI','VII'];
+const slug=s=>s.toLowerCase().replace(/ø/g,'o').replace(/[^a-z0-9]+/g,'-');
+const OUTER_IDS=OUTER.map(slug),MIDDLE_IDS=MIDDLE.map(slug),INNER_IDS=INNER.map(slug);
+
+function hash2(x,y){let h=(Math.imul(x|0,374761393)+Math.imul(y|0,668265263))|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return (h>>>0)/4294967296;}
+function vnoise(x,y){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);
+  const a=hash2(xi,yi),b=hash2(xi+1,yi),c=hash2(xi,yi+1),d=hash2(xi+1,yi+1);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;}
+function fbm(x,y,o=4){let s=0,a=.5,f=1,n=0;for(let i=0;i<o;i++){s+=a*vnoise(x*f+i*17.3,y*f-i*9.1);n+=a;a*=.5;f*=2.03;}return s/n;}
+let seed=7;function rnd(){seed=(seed*16807)%2147483647;return (seed-1)/2147483646;}
+const rr=(a,b)=>a+rnd()*(b-a);
+function smooth(e0,e1,x){const t=Math.min(1,Math.max(0,(x-e0)/(e1-e0)));return t*t*(3-2*t);}
+function angOf(x,z){return ((Math.atan2(-z,x)/DEG)+360)%360;}
+function P(r,a,y=0){return new THREE.Vector3(Math.cos(a*DEG)*r,y,-Math.sin(a*DEG)*r);}
+function sectorIdx(a){return Math.floor(((((180-a)%360)+360)%360)/60)%6;}
+function angDiff(a,b){return ((a-b)%360+540)%360-180;}
+function ringOf(r){return r<RC?'caldera':r<RI?'inner':r<RM?'middle':r<RO?'outer':'beyond';}
+const RINGTXT={outer:'Outer Ring · 0–400 m',middle:'Middle Ring · 400–2000 m',inner:'Inner Ring · 2000–5000 m',caldera:'Central Caldera · Ithuun',beyond:'Beyond the Fault Wall'};
+
+function radialProfile(r){
+  if(r>RO) return 3-Math.max(0,r-1520)*.03-Math.max(0,r-1660)*.4;
+  if(r>RM) return 1+15*(RO-r)/(RO-RM);
+  if(r>RI) return 18+62*(RM-r)/(RM-RI);
+  if(r>RC) return 84+116*Math.pow((RI-r)/(RI-RC),1.15);
+  return 125+75*smooth(.55,1,r/RC);
+}
+function ampOf(r){return r>RO?3:r>RM?3.5:r>RI?9:r>RC?16:4;}
+function rawHeight(x,z,out){
+  const r=Math.hypot(x,z),a=angOf(x,z);
+  let h=radialProfile(r),amp=ampOf(r);
+  const ring=ringOf(r),s=sectorIdx(a);
+  if(ring==='middle'&&s===4)amp*=.25;
+  if(ring==='inner'&&(s===2||s===4))amp*=1.45;
+  h+=(fbm(x*.006+50,z*.006+50,5)-.5)*2*amp;
+  let wall=0,dike=0;
+  const dW=Math.abs(r-RO);
+  if(dW<40){let g=1e9;for(let k=0;k<6;k++)g=Math.min(g,Math.abs(angDiff(a,k*60))*DEG*r);
+    wall=(1-smooth(5,16,dW))*smooth(14,22,g);h+=34*wall;}
+  if(r>RC-10&&r<RO){for(let k=0;k<6;k++){const d=angDiff(a,k*60);if(Math.abs(d)>30)continue;const pd=Math.abs(Math.sin(d*DEG))*r;
+    if(pd<14){const gap=smooth(10,22,Math.abs(r-RM))*smooth(10,22,Math.abs(r-RI))*smooth(RC,RC+40,r)*(1-smooth(RO-70,RO-40,r));
+      const f=(1-smooth(3,10,pd))*gap;dike=Math.max(dike,f);h+=26*f;}}}
+  if(out){out.wall=wall;out.dike=dike;}
+  return h;
+}
+
+/* ---------------- River Rhoenos ---------------- */
+const RIVER_CTRL=[[250,148],[330,152],[420,158],[500,166],[545,180],[578,194],[650,192],[770,184],[900,180],[1050,178],[1250,176],[1450,174],[1700,172]];
+const river=(()=>{const curve=new THREE.CatmullRomCurve3(RIVER_CTRL.map(([r,a])=>P(r,a)));
+  const pts=curve.getSpacedPoints(500);let prev=1e9;
+  return pts.map((p,i)=>{const r=Math.hypot(p.x,p.z);let h=radialProfile(r)-ampOf(r)-1.2;h=Math.min(h,prev);prev=h;
+    return {x:p.x,z:p.z,w:5+9*(i/500),h};});})();
+river.forEach((s,i)=>{const a=river[Math.max(0,i-1)],b=river[Math.min(river.length-1,i+1)];const dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1;s.tx=dx/l;s.tz=dz/l;});
+function riverQuery(x,z){let best=1e18,bi=0;for(let i=0;i<river.length;i+=4){const s=river[i],d=(s.x-x)**2+(s.z-z)**2;if(d<best){best=d;bi=i;}}
+  const lo=Math.max(0,bi-6),hi=Math.min(river.length-1,bi+6);for(let i=lo;i<=hi;i++){const s=river[i],d=(s.x-x)**2+(s.z-z)**2;if(d<best){best=d;bi=i;}}
+  const s=river[bi];return {d:Math.sqrt(best),i:bi,w:s.w,h:s.h,tx:s.tx,tz:s.tz,s};}
+
+/* ---------------- Biomes ---------------- */
+function biomeAt(x,z){const r=Math.hypot(x,z);if(r<RC)return 'ithuun';const s=sectorIdx(angOf(x,z));
+  if(r<RI)return INNER_IDS[s];if(r<RM)return MIDDLE_IDS[s];if(r<RO)return OUTER_IDS[s];
+  if(r<RMARG)return 'outlands';const m=Math.floor((r-RMARG)/30);return m<7?'margin-'+(m+1):'void';}
+const BIOME_DEF={};
+[['outer',OUTER,['#8f7d3c','#4d574b','#a7b2b5','#5b7838','#77654c','#8a877c'],['rye','marsh','frost','meadow','reeds','shore']],
+ ['middle',MIDDLE,['#4a4d55','#1e2a21','#6a6356','#977140','#d2ccbd','#33503e'],['quarry','forest','cairns','scrub','salt','fen']],
+ ['inner',INNER,['#dde8f1','#b5cbdc','#2b1f1f','#5a4a6b','#7a3a25','#c6bca4'],['glacier','seracs','lava','ash','rust','bone']]]
+.forEach(([ring,names,cols,props])=>names.forEach((n,i)=>{BIOME_DEF[slug(n)]={id:slug(n),name:n,ring,sector:i,color:cols[i],props:props[i]};}));
+BIOME_DEF['ithuun']={id:'ithuun',name:'Ithuun',ring:'caldera',sector:-1,color:'#151019',props:'caldera'};
+BIOME_DEF['outlands']={id:'outlands',name:'Ngoại Vực — The Star Moors',ring:'beyond',sector:-1,color:'#3f4537',props:'outlands'};
+const PASTEL=['#f3c9dc','#c4e7f0','#d9cdf2','#cbeccf','#f3ebc0','#f2d4c4','#e8e8f6'];
+for(let m=1;m<=7;m++)BIOME_DEF['margin-'+m]={id:'margin-'+m,name:'Lề '+ROMAN[m-1],ring:'beyond',sector:-1,color:PASTEL[m-1],props:'margin',m};
+BIOME_DEF['void']={id:'void',name:'The White Beyond',ring:'beyond',sector:-1,color:'#eceaf0',props:'margin',m:8};
+const BCOL={};for(const k in BIOME_DEF)BCOL[k]=new THREE.Color(BIOME_DEF[k].color);
+function sectorCenter(i){return 150-60*i;}
+function biomeCentroid(id){const b=BIOME_DEF[id];if(!b)return new THREE.Vector3();if(b.ring==='caldera')return new THREE.Vector3(0,groundHeight(0,0),0);
+  if(b.ring==='beyond'){const r=b.m?RMARG+30*(b.m-1)+15:1200;const p=P(r,150);p.y=groundHeight(p.x,p.z);return p;}
+  const r={outer:750,middle:475,inner:245}[b.ring];const p=P(r,sectorCenter(b.sector));p.y=groundHeight(p.x,p.z);return p;}
+
+/* ---------------- Heightmap ---------------- */
+const N=420,SIZE=WORLD*2,CELL=SIZE/N,HM=new Float32Array((N+1)*(N+1));
+function groundHeight(x,z){let fx=(x+WORLD)/CELL,fz=(z+WORLD)/CELL;fx=Math.max(0,Math.min(N-.001,fx));fz=Math.max(0,Math.min(N-.001,fz));
+  const i=Math.floor(fx),j=Math.floor(fz),u=fx-i,v=fz-j,W=N+1;
+  const a=HM[j*W+i],b=HM[j*W+i+1],c=HM[(j+1)*W+i],d=HM[(j+1)*W+i+1];return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;}
+function structAt(x,z){const o={};rawHeight(x,z,o);return o;}
+
+/* =====================================================================
+   RENDERER / SCENE
+   ===================================================================== */
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);
+document.getElementById('stage').appendChild(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x6b7380);
+const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,1,9000);camera.position.set(0,1750,1550);scene.add(camera);
+const controls=new THREE.OrbitControls(camera,renderer.domElement);
+controls.target.set(0,60,0);controls.enableDamping=true;controls.dampingFactor=.08;controls.maxPolarAngle=1.38;controls.minDistance=25;controls.maxDistance=4200;
+const hemi=new THREE.HemisphereLight(0xb8c4d0,0x2a2620,.6);scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xffe2c0,.9);scene.add(sun);scene.add(sun.target);
+scene.fog=new THREE.Fog(0x6b7380,2600,7500);
+const stars=(()=>{const g=new THREE.BufferGeometry(),a=[];for(let i=0;i<1800;i++){const u=rnd()*2-1,t=rnd()*Math.PI*2,s=Math.sqrt(1-u*u);a.push(s*Math.cos(t)*4000,Math.abs(u)*4000+200,s*Math.sin(t)*4000);}
+  g.setAttribute('position',new THREE.Float32BufferAttribute(a,3));const m=new THREE.Points(g,new THREE.PointsMaterial({color:0xdfe6ff,size:1.6,sizeAttenuation:false,transparent:true,opacity:0,fog:false}));scene.add(m);return m;})();
+
+function M(c,o={}){return new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.85,metalness:.05},o));}
+function mesh(g,m,x=0,y=0,z=0){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);return o;}
+const mat4=(x,y,z,rx=0,ry=0,rz=0,s=1,sy)=>new THREE.Matrix4().compose(new THREE.Vector3(x,y,z),new THREE.Quaternion().setFromEuler(new THREE.Euler(rx,ry,rz)),new THREE.Vector3(s,sy===undefined?s:sy,s));
+function mergeParts(parts){const pos=[],nor=[],col=[],c=new THREE.Color();
+  for(const p of parts){let g=p.geo.index?p.geo.toNonIndexed():p.geo.clone();if(p.m)g.applyMatrix4(p.m);g.computeVertexNormals();
+    const pa=g.attributes.position.array,na=g.attributes.normal.array;c.set(p.color);for(let i=0;i<pa.length;i++){pos.push(pa[i]);nor.push(na[i]);}for(let i=0;i<pa.length/3;i++)col.push(c.r,c.g,c.b);}
+  const o=new THREE.BufferGeometry();o.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));o.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));o.setAttribute('color',new THREE.Float32BufferAttribute(col,3));return o;}
+
+/* =====================================================================
+   MODEL BUILDERS (used both in-world and in the Codex inspector)
+   ===================================================================== */
+const B={};
+B.menhir=()=>{const g=new THREE.Group();const s=mesh(new THREE.CylinderGeometry(.9,1.4,7,4),M(0x6d6a63,{flatShading:true}),0,3.5,0);s.rotation.y=Math.PI/4;g.add(s);
+  const c=mesh(new THREE.CylinderGeometry(.15,.9,1.1,4),M(0x5d5a53,{flatShading:true}),0,7.5,0);c.rotation.y=Math.PI/4;g.add(c);
+  const l=mesh(new THREE.SphereGeometry(.5,6,4),M(0x6f7a4a),.7,1.4,.6);l.scale.set(1,.3,1);g.add(l);return g;};
+B.monolith=(d)=>{const g=new THREE.Group();const stone=M(0x2a2830,{flatShading:true,roughness:.7});
+  g.add(mesh(new THREE.CylinderGeometry(3,5.5,70,6),stone,0,35,0));g.add(mesh(new THREE.CylinderGeometry(0,3,9,6),stone,0,74.5,0));
+  const glow=M(d.color,{emissive:d.color,emissiveIntensity:1.4});
+  [16,34,52].forEach(y=>{const t=mesh(new THREE.TorusGeometry(5.6-2.5*(y/70)+.2,.35,6,24),glow,0,y,0);t.rotation.x=Math.PI/2;g.add(t);});
+  const eye=mesh(new THREE.SphereGeometry(1.2,12,8),glow,0,80,0);g.add(eye);
+  for(let k=0;k<6;k++){const m=B.menhir();m.position.copy(P(13,k*60));m.scale.setScalar(.9);g.add(m);}
+  g.add(mesh(new THREE.CylinderGeometry(9,10,1.5,6),stone,0,.5,0));return g;};
+B.gate=(d)=>{const g=new THREE.Group();const st=M(0x403c40,{flatShading:true});
+  for(const sx of[-17,17]){g.add(mesh(new THREE.BoxGeometry(12,46,12),st,sx,23,0));g.add(mesh(new THREE.CylinderGeometry(0,8.5,8,4),M(0x2b2328,{flatShading:true}),sx,50,0));g.children[g.children.length-1].rotation.y=Math.PI/4;}
+  g.add(mesh(new THREE.BoxGeometry(46,6,11),st,0,40,0));
+  for(let i=-3;i<=3;i++)g.add(mesh(new THREE.BoxGeometry(.6,10,.6),M(0x2a2420,{metalness:.6,roughness:.5}),i*3,32,-4));
+  const ban=mesh(new THREE.PlaneGeometry(6,14),M(d.color,{side:THREE.DoubleSide,emissive:d.color,emissiveIntensity:.25}),0,30,6);g.add(ban);
+  return g;};
+B.wallChunk=()=>{const g=new THREE.Group();const st=M(0x3d3a3e,{flatShading:true});g.add(mesh(new THREE.BoxGeometry(40,30,14),st,0,15,0));
+  for(let i=-3;i<=3;i++)g.add(mesh(new THREE.BoxGeometry(4,4,5),st,i*6,32,0));g.add(B.gate({color:0x8a2a20}).translateX(0).translateZ(-0.01));g.children[g.children.length-1].scale.setScalar(.6);g.children[g.children.length-1].position.set(0,0,9);return g;};
+B.dikeChunk=()=>{const g=new THREE.Group();const st=M(0x2f2d33,{flatShading:true});
+  for(let i=0;i<26;i++){const h=8+Math.random()*12;g.add(mesh(new THREE.CylinderGeometry(1.6,1.7,h,6),st,(Math.random()-.5)*8,h/2,(i-13)*2.1));}
+  g.add(mesh(new THREE.BoxGeometry(14,2,58),M(0x4a453c),0,0,0));return g;};
+B.pineGeo=(dark)=>mergeParts([{geo:new THREE.CylinderGeometry(.35,.5,4,5),color:0x3a2a1e,m:mat4(0,2,0)},
+  {geo:new THREE.ConeGeometry(2.6,6,7),color:dark?0x17241a:0x26402a,m:mat4(0,6,0)},{geo:new THREE.ConeGeometry(2,5,7),color:dark?0x152018:0x2b4a30,m:mat4(0,9,0)},{geo:new THREE.ConeGeometry(1.3,4,7),color:dark?0x121c15:0x2f5034,m:mat4(0,11.6,0)}]);
+B.oakGeo=()=>mergeParts([{geo:new THREE.CylinderGeometry(.3,.55,6,5),color:0x4a4038,m:mat4(0,3,0)},{geo:new THREE.CylinderGeometry(.1,.22,3.5,4),color:0x4a4038,m:mat4(1,6.2,0,0,0,-.8)},
+  {geo:new THREE.CylinderGeometry(.08,.2,3,4),color:0x4a4038,m:mat4(-.9,5.6,.3,.3,0,.9)},{geo:new THREE.CylinderGeometry(.07,.17,2.8,4),color:0x4a4038,m:mat4(0,7,-.6,-.7,0,0)}]);
+B.pine=()=>{const m=new THREE.Mesh(B.pineGeo(true),new THREE.MeshStandardMaterial({vertexColors:true,roughness:.9,flatShading:true}));const g=new THREE.Group();g.add(m);return g;};
+B.oak=()=>{const g=new THREE.Group();g.add(new THREE.Mesh(B.oakGeo(),new THREE.MeshStandardMaterial({vertexColors:true,roughness:.9,flatShading:true})));const n=mesh(new THREE.TorusGeometry(.4,.04,4,10),M(0x8a7a58),1.6,6.4,0);g.add(n);return g;};
+B.ryeGeo=()=>mergeParts([{geo:new THREE.CylinderGeometry(.03,.05,1.4,3),color:0x9c8a3e,m:mat4(0,.7,0)},{geo:new THREE.ConeGeometry(.09,.4,4),color:0xc4a94c,m:mat4(0,1.5,0)}]);
+B.rye=()=>{const g=new THREE.Group();const geo=B.ryeGeo(),mt=new THREE.MeshStandardMaterial({vertexColors:true});for(let i=0;i<70;i++){const m=new THREE.Mesh(geo,mt);m.position.set((Math.random()-.5)*4,0,(Math.random()-.5)*4);m.rotation.z=(Math.random()-.5)*.2;g.add(m);}
+  g.add(mesh(new THREE.BoxGeometry(5,.2,5),M(0x4c3f22),0,-.1,0));return g;};
+B.sampan=()=>{const g=new THREE.Group();const wood=M(0x5a3e26,{roughness:.95}),dark=M(0x3a281a);
+  g.add(mesh(new THREE.BoxGeometry(1.4,.25,5.4),wood,0,.15,0));
+  for(const s of[-1,1]){const side=mesh(new THREE.BoxGeometry(.12,.65,5.4),wood,s*.74,.45,0);side.rotation.z=-s*.28;g.add(side);}
+  for(const s of[-1,1]){const tip=mesh(new THREE.ConeGeometry(.82,1.7,4),dark,0,.42,s*3.5);tip.rotation.x=s*Math.PI/2;tip.rotation.y=Math.PI/4;tip.scale.set(1,1,.45);g.add(tip);}
+  const cg=new THREE.CylinderGeometry(.9,.9,2.2,10,1,true,0,Math.PI);cg.rotateX(Math.PI/2);cg.rotateZ(Math.PI/2);
+  g.add(mesh(cg,M(0x8a7448,{side:THREE.DoubleSide,roughness:1}),0,.45,-.4));
+  const pole=mesh(new THREE.CylinderGeometry(.04,.04,4.4),M(0x6b5236),.5,1.4,2.1);pole.rotation.x=.6;g.add(pole);
+  g.add(mesh(new THREE.BoxGeometry(.18,.25,.18),M(0xffb35a,{emissive:0xff9a3a,emissiveIntensity:1.2}),0,1,-2.3));return g;};
+B.faceless=()=>{const g=new THREE.Group();const dk=M(0x0b0b0e,{roughness:1});
+  for(const s of[-1,1])g.add(mesh(new THREE.CylinderGeometry(.11,.08,1.25,6),dk,s*.13,.62,0));
+  g.add(mesh(new THREE.CylinderGeometry(.27,.17,1,8),dk,0,1.7,0));
+  for(const s of[-1,1]){const a=mesh(new THREE.CylinderGeometry(.06,.045,1.2,5),dk,s*.34,1.55,0);a.rotation.z=s*.06;g.add(a);}
+  g.add(mesh(new THREE.CylinderGeometry(.07,.08,.22,6),dk,0,2.28,0));
+  const head=mesh(new THREE.SphereGeometry(.2,16,12),M(0x1d1d22,{roughness:.6}),0,2.5,0);head.scale.set(1,1.25,1);g.add(head);
+  const face=new THREE.Group();face.position.set(0,2.5,.16);
+  const eyeM=M(0xfff0a0,{emissive:0xffe070,emissiveIntensity:3});for(const s of[-1,1])face.add(mesh(new THREE.SphereGeometry(.04,8,6),eyeM,s*.075,.07,.02));
+  const split=mesh(new THREE.BoxGeometry(.012,.46,.02),M(0xff2a1a,{emissive:0xff2010,emissiveIntensity:2}),0,0,.035);face.add(split);
+  const mouth=mesh(new THREE.TorusGeometry(.15,.022,4,22,Math.PI),M(0x2a0000,{emissive:0x9a0808,emissiveIntensity:1.5}),0,-.02,0);mouth.rotation.z=Math.PI;mouth.scale.set(1,.55,1);face.add(mouth);
+  const tm=M(0xf2ecd8,{emissive:0xffffff,emissiveIntensity:.6});for(let i=0;i<13;i++){const t=Math.PI+i/12*Math.PI;const tooth=mesh(new THREE.ConeGeometry(.012,.045,3),tm,Math.cos(t)*.15,-.02+Math.sin(t)*.15*.55+(i%2?.012:-.012),.01);tooth.rotation.z=i%2?Math.PI:0;face.add(tooth);}
+  face.visible=false;g.add(face);g.userData.face=face;g.userData.head=head;g.scale.setScalar(1.2);
+  g.userData.anim=(t)=>{face.visible=(t%5)>2.5;};return g;};
+B.tall=()=>{const g=new THREE.Group();const bk=M(0x050507,{roughness:1});
+  for(const s of[-1,1])g.add(mesh(new THREE.CylinderGeometry(.25,.14,13,6),bk,s*.6,6.5,0));
+  g.add(mesh(new THREE.CylinderGeometry(.9,.45,7,8),bk,0,16.5,0));
+  for(const s of[-1,1]){const a=mesh(new THREE.CylinderGeometry(.16,.08,14,5),bk,s*1.25,13,.2);a.rotation.z=s*.05;g.add(a);
+    for(let f=0;f<3;f++){const fi=mesh(new THREE.CylinderGeometry(.03,.02,1.6,3),bk,s*1.25+(f-1)*.12,5.4,.2);g.add(fi);}}
+  g.add(mesh(new THREE.CylinderGeometry(.18,.25,1.4,6),bk,0,20.6,0));
+  const head=mesh(new THREE.SphereGeometry(.8,12,10),bk,0,22.2,0);head.scale.set(.75,1.45,.75);g.add(head);
+  const em=M(0xcfd8ff,{emissive:0xb8c8ff,emissiveIntensity:1.2});for(const s of[-1,1])g.add(mesh(new THREE.SphereGeometry(.09,6,5),em,s*.22,22.5,.55));
+  return g;};
+B.murk=()=>{const g=new THREE.Group();const blobs=[];for(let i=0;i<16;i++){const m=mesh(new THREE.SphereGeometry(1,10,8),new THREE.MeshStandardMaterial({color:0x34363b,transparent:true,opacity:.5,depthWrite:false,roughness:1}),(Math.random()-.5)*6,(Math.random())*4,(Math.random()-.5)*6);
+  m.scale.setScalar(1.4+Math.random()*2.2);m.userData.o=m.position.clone();m.userData.p=Math.random()*6;g.add(m);blobs.push(m);}
+  const em=M(0xe8e8e0,{emissive:0xe8e8e0,emissiveIntensity:1});[[-.5,2.4],[.5,2.5],[0,1.6]].forEach(([x,y])=>g.add(mesh(new THREE.SphereGeometry(.12,6,5),em,x,y,3)));
+  g.userData.anim=(t)=>blobs.forEach(b=>{b.position.set(b.userData.o.x+Math.sin(t*.8+b.userData.p)*.6,b.userData.o.y+Math.sin(t*1.1+b.userData.p)*.4,b.userData.o.z+Math.cos(t*.7+b.userData.p)*.6);});return g;};
+B.mawbriar=()=>{const g=new THREE.Group();const lf=M(0x3e5a30,{flatShading:true});
+  for(let i=0;i<7;i++){const a=i/7*Math.PI*2;const m=mesh(new THREE.IcosahedronGeometry(.55+Math.random()*.25,0),lf,Math.cos(a)*.55,.5+Math.random()*.3,Math.sin(a)*.55);g.add(m);}
+  g.add(mesh(new THREE.IcosahedronGeometry(.6,0),lf,0,.95,0));
+  const petals=[];const pm=M(0x8a1424,{side:THREE.DoubleSide,emissive:0x400008}),tm=M(0xeee6d0);
+  for(let k=0;k<6;k++){const o=new THREE.Group();o.rotation.y=k*Math.PI/3;const h=new THREE.Group();o.add(h);
+    const p=mesh(new THREE.BoxGeometry(.6,1.5,.06),pm,0,.75,0);h.add(p);for(let t=0;t<3;t++){const c=mesh(new THREE.ConeGeometry(.05,.22,3),tm,(t-1)*.18,1.45,.05);h.add(c);}
+    o.position.y=.6;g.add(o);petals.push(h);}
+  const maw=mesh(new THREE.SphereGeometry(.38,10,8),M(0x5a0010,{emissive:0xa0101a,emissiveIntensity:.9}),0,.8,0);g.add(maw);
+  g.userData.petals=petals;g.userData.maw=maw;
+  g.userData.setOpen=(t)=>{petals.forEach(h=>{h.rotation.x=t*1.25;h.scale.setScalar(.45+.75*t);});maw.visible=t>.05;g.children.forEach((c,i)=>{if(i<8)c.scale.setScalar(1-.35*t);});};
+  g.userData.setOpen(0);g.userData.anim=(t)=>g.userData.setOpen(.5+.5*Math.sin(t*1.3));return g;};
+B.kvernling=()=>{const g=new THREE.Group();const sk=M(0x2b2420,{roughness:.7});
+  const b=mesh(new THREE.SphereGeometry(.22,10,8),sk,0,.28,0);b.scale.set(1,.7,1.35);g.add(b);g.add(mesh(new THREE.SphereGeometry(.13,8,6),sk,0,.3,.3));
+  const ey=M(0xff2010,{emissive:0xff1a0a,emissiveIntensity:2.5});for(const s of[-1,1]){g.add(mesh(new THREE.SphereGeometry(.03,5,4),ey,s*.06,.36,.41));
+    const md=mesh(new THREE.ConeGeometry(.025,.14,3),M(0xd8cfb0),s*.05,.24,.45);md.rotation.x=Math.PI/2;md.rotation.z=s*.4;g.add(md);}
+  const legs=[];for(let i=0;i<6;i++){const s=i<3?-1:1,k=i%3;const l=mesh(new THREE.CylinderGeometry(.015,.012,.4,3),sk,s*.24,.18,(k-1)*.17);l.rotation.z=s*1.0;g.add(l);legs.push(l);}
+  g.userData.legs=legs;g.userData.anim=(t)=>legs.forEach((l,i)=>l.rotation.x=Math.sin(t*18+i)*.5);return g;};
+B.hut=(c=0x5a4632)=>{const g=new THREE.Group();g.add(mesh(new THREE.BoxGeometry(4,2.6,5),M(c,{flatShading:true}),0,1.3,0));
+  const rg=new THREE.CylinderGeometry(3.2,3.2,5.8,3);rg.rotateX(-Math.PI/2);g.add(mesh(rg,M(0x5e4f2c,{flatShading:true}),0,2.6+1.6,0));
+  g.add(mesh(new THREE.BoxGeometry(1,1.8,.1),M(0x22180f),0,.9,2.51));g.add(mesh(new THREE.BoxGeometry(.6,.5,.1),M(0xffb050,{emissive:0xff9030,emissiveIntensity:1}),1.3,1.6,2.51));return g;};
+B.settlement=(n=7,c)=>{const g=new THREE.Group();for(let i=0;i<n;i++){const a=i/n*Math.PI*2;const h=B.hut(c);h.position.set(Math.cos(a)*14,0,Math.sin(a)*14);h.rotation.y=-a-Math.PI/2;g.add(h);}
+  g.add(mesh(new THREE.CylinderGeometry(1.2,1.4,1,10),M(0x55504a),0,.5,0));
+  const sc=new THREE.Group();sc.add(mesh(new THREE.CylinderGeometry(.08,.08,3),M(0x5a4632),0,1.5,0));const cr=mesh(new THREE.CylinderGeometry(.06,.06,2.2),M(0x5a4632),0,2.4,0);cr.rotation.z=Math.PI/2;sc.add(cr);
+  sc.add(mesh(new THREE.SphereGeometry(.3,8,6),M(0xb8a878),0,3.1,0));sc.position.set(5,0,-4);g.add(sc);return g;};
+B.cave=()=>{const g=new THREE.Group();const ice=M(0xcfe6f5,{roughness:.25,metalness:.1,flatShading:true});
+  const arch=mesh(new THREE.TorusGeometry(10,4,6,12,Math.PI),ice,0,0,0);g.add(arch);
+  const back=mesh(new THREE.CircleGeometry(9,16,0,Math.PI),M(0x05080c,{side:THREE.DoubleSide}),0,0,-2);g.add(back);
+  for(let i=0;i<14;i++){const c=mesh(new THREE.ConeGeometry(1+Math.random()*1.5,4+Math.random()*7,5),ice,(Math.random()-.5)*34,2,(Math.random()-.2)*10);c.rotation.z=(Math.random()-.5)*.5;g.add(c);}
+  for(let i=0;i<5;i++){const st=mesh(new THREE.ConeGeometry(.5,3,4),ice,-6+i*3,8.5,0);st.rotation.x=Math.PI;g.add(st);}return g;};
+B.singularity=()=>{const g=new THREE.Group();g.add(mesh(new THREE.SphereGeometry(18,32,24),new THREE.MeshBasicMaterial({color:0x000000}),0,0,0));
+  const rg=mesh(new THREE.TorusGeometry(27,1.2,8,64),new THREE.MeshBasicMaterial({color:0xd8c8ff}),0,0,0);rg.rotation.x=1.2;g.add(rg);
+  const rg2=mesh(new THREE.TorusGeometry(34,.5,6,64),new THREE.MeshBasicMaterial({color:0x7a5cff,transparent:true,opacity:.6}),0,0,0);rg2.rotation.x=1.35;rg2.rotation.y=.3;g.add(rg2);
+  const beam=mesh(new THREE.CylinderGeometry(1.5,4,150,12,1,true),new THREE.MeshBasicMaterial({color:0x9a80ff,transparent:true,opacity:.22,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}),0,-90,0);g.add(beam);
+  g.userData.anim=(t)=>{rg.rotation.z=t*.3;rg2.rotation.z=-t*.2;};return g;};
+B.riverChunk=()=>{const g=new THREE.Group();const sh=new THREE.Shape();sh.moveTo(-14,-3);sh.bezierCurveTo(-5,-6,5,4,14,-2);sh.lineTo(14,3);sh.bezierCurveTo(5,9,-5,-1,-14,3);
+  const w=mesh(new THREE.ShapeGeometry(sh),M(0x2a4a5a,{metalness:.4,roughness:.2,side:THREE.DoubleSide}),0,.1,0);w.rotation.x=-Math.PI/2;g.add(w);
+  g.add(mesh(new THREE.BoxGeometry(30,.4,14),M(0x3b3428),0,-.2,0));const s=B.sampan();s.position.set(2,.2,0);s.rotation.y=1.5;g.add(s);return g;};
+B.fence=(m)=>{const g=new THREE.Group();const c=PASTEL[Math.min(6,m-1)];const pm=M(c,{emissive:c,emissiveIntensity:.35,roughness:.4});
+  for(let i=0;i<9;i++)g.add(mesh(new THREE.BoxGeometry(.35,4,.35),pm,(i-4)*2.4,2,0));
+  for(const y of[1.4,3.4])g.add(mesh(new THREE.BoxGeometry(20,.15,.15),pm,0,y,0));
+  const door=new THREE.Group();door.add(mesh(new THREE.BoxGeometry(.25,5,.25),M(0xffffff),-1.1,2.5,0));door.add(mesh(new THREE.BoxGeometry(.25,5,.25),M(0xffffff),1.1,2.5,0));door.add(mesh(new THREE.BoxGeometry(2.45,.25,.25),M(0xffffff),0,5,0));
+  door.add(mesh(new THREE.PlaneGeometry(2,4.9),new THREE.MeshBasicMaterial({color:0xfff6e8,transparent:true,opacity:.7,side:THREE.DoubleSide}),0,2.5,0));door.position.set(0,0,-5);door.rotation.y=.4;g.add(door);
+  g.add(mesh(new THREE.BoxGeometry(24,.3,14),M(c),0,-.15,-3));return g;};
+function scatterOn(g,n,rad,fn){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,r=Math.sqrt(Math.random())*rad;const o=fn(i);o.position.x+=Math.cos(a)*r;o.position.z+=Math.sin(a)*r;g.add(o);}}
+B.biome=(id)=>{const d=BIOME_DEF[id];const g=new THREE.Group();const c=new THREE.Color(d.color);
+  g.add(mesh(new THREE.CylinderGeometry(5,5.5,1.2,6),M(c,{flatShading:true}),0,-.6,0));
+  const st=M(0x55504a,{flatShading:true});const R=(fn,n=10,rad=4.2)=>scatterOn(g,n,rad,fn);
+  switch(d.props){
+    case 'rye':R(()=>{const m=new THREE.Mesh(B.ryeGeo(),new THREE.MeshStandardMaterial({vertexColors:true}));m.scale.setScalar(.8);return m;},160);{const f=B.faceless();f.scale.setScalar(.6);f.position.set(4,0,1);g.add(f);}break;
+    case 'marsh':R(()=>{const m=mesh(new THREE.CircleGeometry(.8+Math.random(),12),M(0x2e3a3e,{metalness:.4,roughness:.2}),0,.02,0);m.rotation.x=-Math.PI/2;return m;},8);
+      R(()=>mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshStandardMaterial({color:0x8a8d90,transparent:true,opacity:.25,depthWrite:false}),0,1,0),10);break;
+    case 'frost':R(()=>mesh(new THREE.DodecahedronGeometry(.3+Math.random()*.4,0),M(0xe8f0f4,{flatShading:true}),0,.2,0),24);R(()=>{const k=B.kvernling();k.scale.setScalar(1.6);return k;},4,3);break;
+    case 'meadow':R(()=>mesh(new THREE.SphereGeometry(.3,6,5),M(0x6f8a3e),0,.15,0),30);{const m=B.mawbriar();m.scale.setScalar(.9);g.add(m);}break;
+    case 'reeds':R(()=>{const m=mesh(new THREE.CylinderGeometry(.02,.03,1.4+Math.random(),3),M(0x9a7e52),0,.7,0);m.rotation.z=(Math.random()-.5)*.4;return m;},180);break;
+    case 'shore':R(()=>mesh(new THREE.SphereGeometry(.15+Math.random()*.15,5,4),M(0x9a978c),0,.05,0),70);{const b=mesh(new THREE.CylinderGeometry(.3,.7,1,10,1,true),M(0x6a5a38,{metalness:.7,side:THREE.DoubleSide}),1,.5,1);b.rotation.z=1.2;g.add(b);}break;
+    case 'quarry':for(let i=0;i<5;i++)g.add(mesh(new THREE.BoxGeometry(8-i*1.4,.6,3),M(0x3c3f47,{flatShading:true}),0,i*.6+.3,-1.5+i*.2));{const w=mesh(new THREE.PlaneGeometry(9,1.2),M(0x2a4a5a,{metalness:.4,roughness:.2}),0,.05,2.5);w.rotation.x=-Math.PI/2;g.add(w);}break;
+    case 'forest':R(()=>{const t=B.pine();t.scale.setScalar(.32+Math.random()*.1);return t;},16);{const t=B.tall();t.scale.setScalar(.27);g.add(t);}break;
+    case 'cairns':R(()=>{const c2=new THREE.Group();for(let k=0;k<4;k++)c2.add(mesh(new THREE.DodecahedronGeometry(.35-k*.06,0),st,0,.25+k*.42,0));return c2;},9);break;
+    case 'scrub':R(()=>mesh(new THREE.IcosahedronGeometry(.3+Math.random()*.3,0),M(0x7a6a30,{flatShading:true}),0,.2,0),26);R(()=>B.kvernling(),5,3);break;
+    case 'salt':R(()=>{const m=mesh(new THREE.OctahedronGeometry(.25+Math.random()*.3,0),M(0xffffff,{roughness:.2}),0,.25,0);m.scale.y=2;return m;},22);break;
+    case 'fen':R(()=>{const m=mesh(new THREE.CircleGeometry(.6+Math.random()*.8,12),M(0x24403a,{metalness:.4,roughness:.2}),0,.02,0);m.rotation.x=-Math.PI/2;return m;},9);{const s=B.sampan();s.scale.setScalar(.6);s.position.set(1,0,1);g.add(s);const m=B.mawbriar();m.scale.setScalar(.7);m.position.set(-2.5,0,-1);g.add(m);}break;
+    case 'glacier':R(()=>mesh(new THREE.BoxGeometry(.8+Math.random(),.6+Math.random()*1.4,.8+Math.random()),M(0xd8ecf8,{roughness:.2,flatShading:true}),0,.4,0),14);{const cv=B.cave();cv.scale.setScalar(.15);cv.position.set(0,0,-2);g.add(cv);}break;
+    case 'seracs':R(()=>{const m=mesh(new THREE.ConeGeometry(.3+Math.random()*.3,1.5+Math.random()*2,5),M(0xbad6ea,{roughness:.2,flatShading:true}),0,.9,0);return m;},26);break;
+    case 'lava':R(()=>mesh(new THREE.DodecahedronGeometry(.4+Math.random()*.5,0),M(0x1a1414,{flatShading:true}),0,.2,0),20);R(()=>mesh(new THREE.BoxGeometry(2,.05,.12),M(0xff4010,{emissive:0xff3008,emissiveIntensity:2}),0,.02,0),12);break;
+    case 'ash':R(()=>{const m=mesh(new THREE.SphereGeometry(.7,8,6),M(0x6a5a80),0,0,0);m.scale.y=.4;return m;},12);R(()=>mesh(new THREE.SphereGeometry(.05,4,3),M(0xb8a8d8,{emissive:0x8a78b8}),0,1+Math.random()*3,0),40);break;
+    case 'rust':R(()=>{const m=mesh(new THREE.ConeGeometry(.25,1+Math.random()*1.5,4),M(0x8a3a20,{metalness:.6,flatShading:true}),0,.6,0);m.rotation.z=(Math.random()-.5)*.6;return m;},28);break;
+    case 'bone':R(()=>{const m=mesh(new THREE.TorusGeometry(.7,.06,4,12,Math.PI),M(0xeee6d0),0,0,0);m.rotation.y=Math.random()*3;return m;},14);{const sk=mesh(new THREE.SphereGeometry(.5,10,8),M(0xeee6d0),0,.4,0);g.add(sk);}break;
+    case 'caldera':{const rim=mesh(new THREE.TorusGeometry(3.8,1.1,8,24),M(0x1a1420,{flatShading:true}),0,.4,0);rim.rotation.x=Math.PI/2;g.add(rim);const s=B.singularity();s.scale.setScalar(.06);s.position.y=3;g.add(s);}break;
+    case 'outlands':R(()=>{const m=B.menhir();m.scale.setScalar(.25);return m;},8);R(()=>mesh(new THREE.SphereGeometry(.2,5,4),M(0x4c5a3a),0,.1,0),20);break;
+    case 'margin':{const f=B.fence(d.m||7);f.scale.setScalar(.35);g.add(f);}break;
+  }
+  return g;};
+
+/* =====================================================================
+   LORE REGISTRY
+   ===================================================================== */
+const LORE={};
+function lore(id,o){LORE[id]=Object.assign({id},o);return LORE[id];}
+const BIOME_TXT={
+ gremvang:['Biome — Cultivated Rye Plain','Hvel','The breadbasket of the Wheel: chest-high rye around the hamlet of Kraghaven. The grain hisses and whispers even when no wind is blowing.','Harvest only by daylight. Scarecrows are set facing outward, away from the village. At dusk, faceless figures stand at the field edges and simply watch.','Walk the furrows, never the margins. Never meet the gaze of a figure at the field\'s edge for longer than a breath.'],
+ kjolmyr:['Biome — Cold Peat Mire','Hvel','A drowned moor of black peat and grey standing water, cupped between the dikes of the north. The fog here is the colour of wet ash, not of cloud.','If the fog turns grey rather than white, stop speaking. The Murk hunts by breath and follows any who wander the mire.','Keep moving; sprint for the dikes. The Murk will not cross dike stone nor leave the mire. A sword stroke scatters it for a few heartbeats.'],
+ hrimmark:['Biome — Frost Moor','Hvel','Hoarfrost lies on the heather in every season. Frost-heaved stones hide nests of Kvernlings, fist-sized and many-legged.','Never sleep on bare ground. The frost creaks in a rhythm that is not your footsteps.','Stamp as you walk; one sword blow kills a Kvernling, and sweeps knock a pack back. Do not stand still.'],
+ valen:['Biome — Green Meadow','Aethe','The gentlest-looking land of the Wheel: soft meadows and heather in rounded clumps. Some of the clumps are Mawbriar.','A bush that does not sway in the wind is not a bush. Mawbriar wait until you are within a few paces.','Strike from sword reach or shoot from afar. Walk where the grass is cropped short.'],
+ kessaren:['Biome — Reedbed & Broken Causeway','Aethe','Brown reed-marsh crossed by drowned causeways of the first settlers. Voices in the reeds call your name in your mother\'s accent.','Never answer a voice in the reeds in your own tongue.','Answer only in Aethe, or not at all. Carry salt; pour a line of it across the causeway behind you.'],
+ thalenis:['Biome — Grey Shingle Shore','Aethe','The flat, pebbled outflow plain of the Rhoenos where it reaches the West Gate. Bells of a drowned chapel ring under the shingle.','Count the bells. Twelve is weather. Thirteen is something else.','If you count thirteen, leave by the West Gate before the fourteenth.'],
+ dvelskarn:['Biome — Slate Quarry Gorges','Hvel','Terraced slate pits cut by the young Rhoenos after it leaves the glacier. The miners\' camp Skarnhold stands empty, tools still on their hooks.','Tools left underground must never be retrieved. The quarries echo with picks at night.','Travel the river by sampan; stay out of the cut terraces after dusk.'],
+ nyrkvold:['Biome — Black Pine Forest','Hvel','A forest of blackpines that grow a hand\'s-breadth each night. The canopy is much too high, and something higher still stands among the trunks.','NEVER LOOK UP AT NIGHT. The Tall One exists only above eye-level after dark.','Keep your eyes on your boots and walk by the sound of the stream. Leave the forest before dusk.'],
+ hjarnvang:['Biome — Cairn Heath','Hvel','Grey heath studded with cairns no one remembers building. There is one more cairn every morning.','Do not add a stone. Do not topple a stone. Do not count them aloud.','If you find a cairn in your own camp, break camp at once and walk downhill.'],
+ sarrobren:['Biome — Ochre Scrubland','Aethe','Dry, ochre gullies and thornscrub. Kvernling swarms boil from the gullies at the smell of sweat.','Swarms emerge whenever someone lingers; they are fastest in the evening heat.','Move by day and keep your blade drawn. Fight with your back to a slope so they cannot surround you.'],
+ halorren:['Biome — Salt Flats','Aethe','A mirror-flat white pan. A mirage of a second traveller walks parallel to you, a little ahead, wearing your clothes.','Never wave back at the walker in the salt.','Keep your eyes on the horizon, not the mirage; cross at noon when it is weakest.'],
+ nerith:['Biome — Wet Fen','Aethe','Where the Rhoenos slows after breaking through the West Dike Gap: reed islands, black pools and moored sampans. Mawbriar grow along the banks.','Banks are where the Mawbriar wait. Water is safer than land here.','Board a sampan [F] and travel by river. Keep to the middle of the channel.'],
+ hveskgruv:['Biome — Glacier','Hvel / Ketha border','The great glacier on the inner slope. From its ice cave the Rhoenos is born. The cave exhales warm air that smells of breath.','Do not go deeper into the cave than daylight reaches. The warm air is breathing out; one day it will breathe in.','Follow the meltwater out, never in. Leave offerings of iron nails at the mouth.'],
+ iskhjarn:['Biome — Serac Field (The Ice-Brain)','Hvel / Ketha border','Ridged seracs that groan in long, patterned tones the Hvel call speech. Pilgrims have transcribed it; their notes all end mid-sentence.','Listening too long makes you understand it.','Stop your ears with wax. Cross between seracs only in pairs, one watching the other.'],
+ 'thaal-uresh':['Biome — Basalt & Lava Vents','Ketha','The still-warm wound of the magma dome: black basalt plates, red fissures and sulphur vents.','The crust is thin where it is quiet. The ground hums before it opens.','Probe ahead with a spear-butt or the bow. Walk on the dark plates, never on the grey ash between.'],
+ 'vaar-ithun':['Biome — Violet Ash Slopes','Ketha','Slopes of violet volcanic ash. At dawn the ash falls upward toward Ithuun.','Do not breathe the ash that rises. It returns to the crater and takes what it carries.','Cloth over mouth. Lie flat at dawn until the upward fall has passed.'],
+ kaurath:['Biome — Rust Iron Scree','Ketha','Rust-red iron scree where compasses spin. Ruined war-camps of the Ketha lie in rings.','Iron weapons grow heavy here, as if they want to stay.','Navigate by the dikes, not by needle. Do not drop your sword; you will not lift it again.'],
+ 'ur-keth':['Biome — Bone Plateau','Ketha','A bone-pale plateau of fossil ossuaries, the "First City" of the Ketha, laid out in the shape of an eye.','What is buried here is not yours, and it remembers being alive.','Take nothing. Leave by the same path you entered, walking backwards for the first hundred paces.'],
+ ithuun:['Caldera — Cosmic Anomaly','Ketha (no human tongue reaches the floor)','The collapsed heart of the magma dome. An obsidian crater floor, and above it a sphere of absent light that the Ketha call the Unlidded Eye.','Time runs slow at the rim and not at all on the floor. Nothing that descends comes back the same height.','None known. Turn back at the rim.'],
+ outlands:['Region — Moorland & Star Wings','Hvel / pre-Hvel','The open moor outside the Fault Wall, crossed by the six menhir wings of the Star.','The menhirs lean a finger-width toward whoever walks between them at night.','Walk the outside of a wing, never between two rows.']
+};
+const MARGIN_TXT=['The air smells of a school corridor after everyone has gone home.','The light comes from no sun; there are no shadows on the fence.','You can hear a swimming pool, echoing, very far away.','The grass is soft and short like carpet. It is slightly warm.','You remember a house you have never lived in, and want to go home to it.','The fence has a gate. It only opens inward.','No one has come back to describe Lề VII.'];
+for(const id in BIOME_DEF){const d=BIOME_DEF[id];
+  if(d.props==='margin'){const m=d.m||8;lore(id,{name:d.name+(m<8?' — Elvaren Margin':''),cls:'Liminal Margin — Elvaren Dreamcore Fence',ring:'Outer Margins · band '+(m<8?ROMAN[m-1]+' of VII':'beyond VII'),lang:'None — Elvaren (words do not carry here)',
+    desc:'Seven pastel fences ring the world beyond the Star. The Elvaren say they were not built, only noticed. Each margin is calmer, softer and more familiar than the last.',habits:MARGIN_TXT[Math.min(6,m-1)],counter:'Turn around while it still feels like a dream. If it begins to feel like home, you have gone one margin too far.',build:()=>B.fence(Math.min(7,m)),kind:'biome'});continue;}
+  const t=BIOME_TXT[id];lore(id,{name:d.name,cls:t[0],ring:(RINGTXT[d.ring]||'')+(d.sector>=0?' · Sector '+ROMAN[d.sector]:''),lang:t[1],desc:t[2],habits:t[3],counter:t[4],build:()=>B.biome(id),kind:'biome'});}
+lore('void',{name:'The White Beyond',cls:'Liminal Void',ring:'Beyond Lề VII',lang:'—',desc:'Where the land fades to white.',habits:'—',counter:'Do not.',build:()=>B.fence(7)});
+lore('dike',{name:'Nan Hoa — The Six Radial Dikes',cls:'Geological Dike / Ancient Masonry',ring:'Inner → Outer Ring · sector boundaries',lang:'Hvel "Nanstav" · Ketha "Ur-veth"',
+  desc:'When the magma dome collapsed, six radial fractures filled with basalt, standing proud like the spokes (nan hoa) of a wheel. Generations dressed them with stone. They divide the Wheel into six sectors.',
+  habits:'Nothing that crawls crosses dike stone: Kvernlings and the Murk turn back at the basalt. Passes exist only where the rings meet, and where the Rhoenos broke through the West Dike.',
+  counter:'Sleep with your back to a dike. If chased, find a ring-pass and put the stone between you and it.',build:B.dikeChunk});
+lore('faultwall',{name:'Vòng Thành — Outer Ring Fault Wall',cls:'Ring Fault Scarp / Fortification',ring:'Outer Ring boundary (≈ r 900)',lang:'Hvel / Aethe',
+  desc:'The ring fault where the skirt of the dome sheared away — a natural cliff later crowned with merlons. Six gates pierce it, each facing one apex of the Star.',
+  habits:'The wall keeps things in, not out. Watchers say the merlons are counted every dawn and one is always missing.',counter:'Enter and leave only by the gates. Never climb.',build:B.wallChunk});
+const MONO=[{id:'morgunstav',name:'Morgunstav / Heosine',a:0,color:0xffc98a,lang:'Hvel "Morning-staff" · Aethe "Heosine"',t:'The dawn apex. Its amber rune-rings light a moment before sunrise, every day, even under cloud.',h:'Travellers who touch it at dawn forget one night of their lives — always a bad one.',c:'Arrive after sunrise. Shade your eyes from the top-stone.'},
+ {id:'pyrrhene',name:'Pyrrhene',a:60,color:0xff5a3a,lang:'Aethe',t:'The fire apex. Warm to the touch in winter; the grass around it never frosts.',h:'Birds that land on it fall asleep and do not wake.',c:'Rest near it on cold nights, but never against it.'},
+ {id:'nephiren',name:'Nephiren',a:120,color:0x9fb8ff,lang:'Aethe',t:'The cloud apex. Mist pours from its crown like water from a spring and flows downhill toward Gremvang.',h:'The mist carries voices from the rye-fields.',c:'Walk upwind of its mist.'},
+ {id:'kveldstav',name:'Kveldstav / Hesperon',a:180,color:0xd08aff,lang:'Hvel "Evening-staff" · Aethe "Hesperon"',t:'The evening apex of the West Star Wing, beside which the Rhoenos leaves the world.',h:'Its shadow points east at sunset, toward Ithuun, regardless of where the sun is.',c:'Follow the river, not the shadow.'},
+ {id:'kaldstav',name:'Kaldstav',a:240,color:0xbff0ff,lang:'Hvel "Cold-staff"',t:'The cold apex. Frost grows on it in high summer, spelling words in a script no one reads.',h:'Reading the frost makes your fingers numb for a day.',c:'Do not trace the frost-letters with a finger.'},
+ {id:'ravnstav',name:'Ravnstav',a:300,color:0x8a8aa8,lang:'Hvel "Raven-staff"',t:'The raven apex. Ravens circle it constantly but never land.',h:'If a raven lands, someone in the Wheel has just died.',c:'Count the ravens before you pass. If one is missing, take the long way.'}];
+MONO.forEach((m,k)=>{lore(m.id,{name:m.name,cls:'Apex Monolith of the Six-Pointed Star',ring:'Beyond the Fault Wall · Star apex '+ROMAN[k],lang:m.lang,desc:m.t,habits:m.h,counter:m.c,build:()=>B.monolith(m),kind:'landmark'});
+  lore('gate-'+k,{name:'Cổng '+m.name.split(' /')[0].replace('stav','')+' — Gate '+ROMAN[k],cls:'Gatehouse of the Fault Wall',ring:'Outer Ring Fault Wall · facing '+m.name,lang:m.lang,
+   desc:'One of six gates through the Vòng Thành, aligned on the menhir wing that runs out to '+m.name+'. The towers are older than the wall itself.',habits:'The gate remembers faces. Those who look back while passing beneath the lintel find it closed when they return.',counter:'Pass through without looking back. Touch the lintel stone with iron.',build:()=>B.gate(m),kind:'landmark'});});
+lore('menhir',{name:'Star Menhirs — Hàng Đá Dựng',cls:'Megalithic Alignment',ring:'Beyond the Fault Wall · Six Star Wings',lang:'pre-Hvel',desc:'Hundreds of standing stones trace a six-pointed star around the Wheel. Only the wings outside the wall still stand; inside, they were broken to build the dikes.',
+  habits:'The stones lean a finger-width toward whoever walks between them at night.',counter:'Walk the outside of a wing, never between two rows.',build:B.menhir});
+lore('rhoenos',{name:'Sông Rhoenos — The Rhoenos River',cls:'River',ring:'Inner → Middle → Outer → West Star Wing',lang:'Aethe "Rhoenos" · Hvel "Rønå"',
+  desc:'Born in the Hveskgruv glacier cave, it cuts the slate of Dvelskarn, slips through the West Dike Gap into the fen of Nerith, leaves by the West Gate and follows the West Star Wing out of the world.',
+  habits:'It flows faster at night and makes no sound at all after midnight. What swims in it does not like the taste of wood.',counter:'Travel by sampan [F]. Never drink at the West Dike Gap. Keep to the middle of the channel.',build:B.riverChunk});
+lore('cave',{name:'Hang Băng Hveskgruv — Glacier Cave',cls:'Glacier Cave / River Source',ring:'Inner Ring · Sector I',lang:'Hvel / Ketha',desc:'An arch of blue ice from which the Rhoenos pours. Warm air breathes out of it in long, slow exhalations.',habits:'Light reaches thirty paces in. Beyond that, people report a staircase.',counter:'Do not take the stairs.',build:B.cave});
+lore('singularity',{name:'Mắt Ithuun — The Unlidded Eye',cls:'Cosmic Anomaly',ring:'Central Caldera · Ithuun',lang:'Ketha — "the word before words"',desc:'A sphere of absent light hanging above the obsidian floor, girdled by a slow ring of pale fire. Every road in the Wheel slopes toward it.',habits:'It does not watch. It is the reason watching exists.',counter:'There is no countermeasure. Keep the rim between you and it.',build:B.singularity});
+lore('sampan',{name:'Xuồng Gỗ — Rhoenos Sampan',cls:'Vessel — Flat-bottomed River Skiff',ring:'Rhoenos River (Dvelskarn → Nerith → Thalenis)',lang:'Aethe',desc:'Rustic plank skiffs with a woven bamboo canopy and a stern lantern, left moored for any traveller.',
+  habits:'Custom: leave a sampan downstream of where you found it, and a coin under the canopy.',counter:'Press [F] near one to board, WASD to pole, [F] again to step ashore. Things in the water cannot climb onto a wooden hull.',build:B.sampan});
+lore('kraghaven',{name:'Kraghaven',cls:'Settlement — Farming Hamlet',ring:'Outer Ring · Gremvang (Sector I)',lang:'Hvel',desc:'Seven turf-roofed houses around a well, ringed by rye. The people are kind, quiet, and keep the shutters closed.',
+  habits:'Shutters close at dusk. Families sleep facing the wall, never the window. No one names the figures at the field edge.',counter:'Ask for bread, not shelter — they will give the first. Sanity recovers near the well.',build:()=>B.settlement(7)});
+lore('skarnhold',{name:'Skarnhold',cls:'Settlement — Abandoned Quarry Camp',ring:'Middle Ring · Dvelskarn (Sector I)',lang:'Hvel',desc:'A miners\' camp emptied in a single night. Supper is still on the tables, petrified.',habits:'Doors here open on their own when you are not looking.',counter:'Do not sleep in Skarnhold. Do not eat the supper.',build:()=>B.settlement(5,0x4a4a50)});
+lore('rhoenmouth',{name:'Rhoenmouth — Cửa Rhoenos',cls:'Settlement — Ferry Hamlet',ring:'Outer Ring · Thalenis (Sector VI)',lang:'Aethe',desc:'Ferrymen\'s houses by the West Gate where the Rhoenos leaves the Wheel.',habits:'The ferrymen will take you out of the Wheel for a coin. They have never taken anyone back in.',counter:'Pay after the crossing, never before.',build:()=>B.settlement(6,0x6a5440)});
+lore('pine',{name:'Nyrkvøld Blackpine',cls:'Flora — Conifer',ring:'Middle Ring · Nyrkvøld, scattered elsewhere',lang:'Hvel',desc:'Near-black pines with resin that smells of candle smoke. They grow a hand\'s-breadth each night.',habits:'The forest is taller every morning, and so is what lives above it.',counter:'Chalk-mark trunks as you go; the marks will be higher on the way back, but they will be there.',build:B.pine});
+lore('oak',{name:'Grey Gallows-Oak',cls:'Flora — Dead Hardwood',ring:'Outer Ring & Star Moors',lang:'Hvel',desc:'Leafless grey oaks that never rot. Old rope loops hang from many.',habits:'Ropes reappear on branches that were cut clean.',counter:'Do not camp beneath one. Do not cut the rope.',build:B.oak});
+lore('rye',{name:'Kraghaven Rye',cls:'Flora — Cereal',ring:'Outer Ring · Gremvang',lang:'Hvel',desc:'Tall, pale-gold rye that whispers without wind.',habits:'The whispering is loudest at the field edges, where the Faceless Shadows stand.',counter:'Harvest by daylight only; leave the last sheaf standing.',build:B.rye});
+lore('faceless',{name:'Bóng Người Không Mặt — The Faceless Shadow',cls:'Entity — Gaze-bound (Folk Horror)',ring:'Outer Ring · Gremvang — Kraghaven field edges',lang:'Hvel "Andlitslaus"',
+  desc:'A tall, dark figure with a smooth, blank head, standing motionless where the rye meets the moor. It is always facing you.',
+  habits:'It reacts to being observed. Hold your gaze on it for more than 2.5 seconds and the blank face splits: two glowing eyes, then an ear-to-ear grin of jagged teeth. It lurches closer, and as long as you keep looking, it drinks your sanity and your blood.',
+  counter:'LOOK AWAY. Peripheral glances are safe. Iron passes through it harmlessly — a strike only makes it step somewhere else.',build:B.faceless,kind:'creature'});
+lore('tall',{name:'Kẻ Cao Nyrkvøld — The Tall One',cls:'Entity — Vertical Apparition (Cosmic Horror)',ring:'Middle Ring · Nyrkvøld',lang:'Hvel "Høgvesen"',
+  desc:'A figure twice the height of the blackpines, arms hanging to its knees. By day it is a dark shape among the trunks. By night it is only ever above you.',
+  habits:'Triggers when you LOOK UP in Nyrkvøld at night: it is already there, bending over the canopy, and your mind empties into it.',counter:'Do not look up at night. Keep your eyes on the path; leave the forest before dusk.',build:B.tall,kind:'creature'});
+lore('murk',{name:'The Murk — Sương Xám',cls:'Entity — Fog Predator',ring:'Outer Ring · Kjølmyr',lang:'Hvel "Myrkvi"',
+  desc:'A heaving mass of grey fog with three pale points like eyes. When it is near, the fog of Kjølmyr thickens to ash-grey.',
+  habits:'Chases anything that breathes inside the mire, a little slower than a sprint. It will not cross dike stone or leave Kjølmyr.',counter:'Sprint (Shift). A sword stroke scatters it for a few seconds. Arrows pass straight through.',build:B.murk,kind:'creature'});
+lore('mawbriar',{name:'Mawbriar — Bụi Hàm (Carnivorous Flora)',cls:'Carnivorous Flora — Ambush Predator',ring:'Outer Valen & Kessaren · Middle Nerith',lang:'Aethe "Stomalis"',
+  desc:'Indistinguishable from a heather bush until you are within a few paces — then its leaves peel back into a ring of red, toothed petals around a glistening maw.',
+  habits:'Camouflaged and motionless until approached; lunges and bites anything within reach.',counter:'Three sword strikes or two arrows kill it. Bushes that do not sway in the wind should be given a wide berth.',build:B.mawbriar,kind:'creature'});
+lore('kvernling',{name:'Kvernlings — Lũ Nhỏ Hung Tợn',cls:'Fauna — Swarm Vermin (Tiny Vicious Creatures)',ring:'Outer Hrimmark · Middle Sarrobren & Halorren',lang:'Hvel "Kvern" (grinder)',
+  desc:'Fist-sized, six-legged, red-eyed things with grinding mandibles. They nest under stones in packs.',
+  habits:'Swarm anything that comes near, faster than you can walk. Each bite is small; there are always many.',counter:'One blow or one arrow kills one. Sword knockback scatters the pack. They will not cross dike stone.',build:B.kvernling,kind:'creature'});
+
+/* =====================================================================
+   WORLD CONSTRUCTION
+   ===================================================================== */
+const pickables=[];
+function reg(o,id){o.traverse(c=>{c.userData.loreId=id;});pickables.push(o);return o;}
+function place(o,x,z,y=0){o.position.set(x,groundHeight(x,z)+y,z);scene.add(o);return o;}
+let terrain,water,markers=new THREE.Group(),labelsOn=true;
+const LABELS=[];
+function addLabel(text,pos,cls){const el=document.createElement('div');el.className='lbl '+(cls||'');el.textContent=text;document.getElementById('labels').appendChild(el);LABELS.push({el,pos});}
+function marker(icon,color,id,pos,h=30){const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');
+  x.fillStyle='#0d0b0fcc';x.beginPath();x.arc(32,32,26,0,7);x.fill();x.strokeStyle=color;x.lineWidth=3;x.stroke();x.fillStyle=color;x.font='30px serif';x.textAlign='center';x.textBaseline='middle';x.fillText(icon,32,34);
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false,transparent:true}));s.scale.set(22,22,1);s.position.copy(pos).add(new THREE.Vector3(0,h,0));s.renderOrder=10;markers.add(s);reg(s,id);return s;}
+const enemies=[],sampans=[],shadows=[];
+let tallE,murkE,singularity;
+const KRAG=P(760,150);
+
+function buildWorld(){
+  // ---- heightmap
+  const W=N+1;
+  for(let j=0;j<=N;j++)for(let i=0;i<=N;i++){const x=-WORLD+i*CELL,z=-WORLD+j*CELL;let h=rawHeight(x,z);
+    const r=Math.hypot(x,z);if(r>200){const q=riverQuery(x,z);if(q.d<130){const bed=q.d<q.w?q.h-3+3*(q.d/q.w)**2:q.h+(q.d-q.w)*.45;h=Math.min(h,bed);}}
+    HM[j*W+i]=h;}
+  KRAG.y=groundHeight(KRAG.x,KRAG.z);
+  // ---- terrain mesh
+  const geo=new THREE.PlaneGeometry(SIZE,SIZE,N,N);geo.rotateX(-Math.PI/2);
+  const pos=geo.attributes.position,cols=new Float32Array(pos.count*3),c=new THREE.Color(),STONE=new THREE.Color(0x37353a),MUD=new THREE.Color(0x3b3428),st={};
+  for(let k=0;k<pos.count;k++){const x=pos.getX(k),z=pos.getZ(k);const i=Math.round((x+WORLD)/CELL),j=Math.round((z+WORLD)/CELL);const h=HM[j*W+i];pos.setY(k,h);
+    const px=x+(fbm(x*.008,z*.008,3)-.5)*60,pz=z+(fbm(x*.008+40,z*.008+40,3)-.5)*60;c.copy(BCOL[biomeAt(px,pz)]);
+    c.multiplyScalar(.8+.4*fbm(x*.05,z*.05,3));rawHeight(x,z,st);const s=Math.max(st.wall,st.dike);if(s>0)c.lerp(STONE,Math.min(1,s*1.3));
+    const r=Math.hypot(x,z);if(r>200&&r<1720){const q=riverQuery(x,z);if(q.d<q.w+4)c.lerp(MUD,.8*(1-smooth(q.w,q.w+4,q.d)));}
+    if(r<RC){const glow=Math.max(0,1-r/100)*fbm(x*.08,z*.08,2);c.r+=glow*.25;c.b+=glow*.35;}
+    cols[k*3]=c.r;cols[k*3+1]=c.g;cols[k*3+2]=c.b;}
+  geo.setAttribute('color',new THREE.BufferAttribute(cols,3));geo.computeVertexNormals();
+  terrain=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({vertexColors:true}));terrain.userData.loreId='__terrain';scene.add(terrain);
+  // ---- river ribbon
+  const rp=[],ri=[];river.forEach((s,i)=>{const nx=-s.tz,nz=s.tx;rp.push(s.x+nx*s.w,s.h,s.z+nz*s.w,s.x-nx*s.w,s.h,s.z-nz*s.w);if(i>0){const a=(i-1)*2;ri.push(a,a+1,a+2,a+1,a+3,a+2);}});
+  const wg=new THREE.BufferGeometry();wg.setAttribute('position',new THREE.Float32BufferAttribute(rp,3));wg.setIndex(ri);wg.computeVertexNormals();
+  water=new THREE.Mesh(wg,new THREE.MeshStandardMaterial({color:0x2a4c5e,metalness:.35,roughness:.18,transparent:true,opacity:.88,side:THREE.DoubleSide}));scene.add(water);reg(water,'rhoenos');
+  // ---- glacier cave at river source
+  const cv=B.cave();const s0=river[0];cv.position.set(s0.x,s0.h,s0.z);cv.rotation.y=Math.atan2(s0.tx,s0.tz);scene.add(cv);reg(cv,'cave');
+  // ---- gates, monoliths, menhirs
+  MONO.forEach((m,k)=>{const gp=P(RO,m.a);const gt=B.gate(m);place(gt,gp.x,gp.z,-2);gt.rotation.y=(m.a+90)*DEG;reg(gt,'gate-'+k);
+    const mp=P(RSTAR,m.a);const mo=B.monolith(m);place(mo,mp.x,mp.z,-1);reg(mo,m.id);addLabel(m.name,mp.clone().setY(groundHeight(mp.x,mp.z)+95),'mono');});
+  const mgeo=mergeParts([{geo:new THREE.CylinderGeometry(.9,1.4,7,4),color:0x6d6a63,m:mat4(0,3.5,0,0,Math.PI/4,0)},{geo:new THREE.CylinderGeometry(.15,.9,1.1,4),color:0x5d5a53,m:mat4(0,7.5,0,0,Math.PI/4,0)}]);
+  const mpos=[];for(let k=0;k<6;k++){const A=P(RSTAR,k*60),Bp=P(RSTAR,(k+2)*60),L=A.distanceTo(Bp);for(let t=0;t<=L;t+=22){const p=A.clone().lerp(Bp,t/L),r=Math.hypot(p.x,p.z);
+    if(r>RO+25&&r<RSTAR-14){const q=riverQuery(p.x,p.z);if(q.d>q.w+5)mpos.push(p);}}}
+  const mim=new THREE.InstancedMesh(mgeo,new THREE.MeshLambertMaterial({vertexColors:true}),mpos.length);
+  mpos.forEach((p,i)=>mim.setMatrixAt(i,mat4(p.x,groundHeight(p.x,p.z)-.5,p.z,0,rnd()*3,(rnd()-.5)*.12,1.6+rnd()*.8)));scene.add(mim);reg(mim,'menhir');
+  // ---- fault wall merlons
+  const mer=[];for(let a=0;a<360;a+=.8){let g=1e9;for(let k=0;k<6;k++)g=Math.min(g,Math.abs(angDiff(a,k*60))*DEG*RO);if(g<24)continue;mer.push(a);}
+  const merM=new THREE.InstancedMesh(new THREE.BoxGeometry(5,5,6),new THREE.MeshLambertMaterial({color:0x423f44}),mer.length);
+  mer.forEach((a,i)=>{const p=P(RO,a);merM.setMatrixAt(i,mat4(p.x,groundHeight(p.x,p.z)+1.5,p.z,0,a*DEG,0));});scene.add(merM);reg(merM,'faultwall');
+  // ---- dike basalt columns
+  const dk=[];for(let k=0;k<6;k++)for(let r=RC+40;r<RO-60;r+=13){if(Math.abs(r-RM)<24||Math.abs(r-RI)<24)continue;const p=P(r,k*60+(rnd()-.5)*.4);const q=riverQuery(p.x,p.z);if(q.d<40)continue;dk.push(p);}
+  const dkM=new THREE.InstancedMesh(new THREE.CylinderGeometry(2.4,2.6,14,6),new THREE.MeshLambertMaterial({color:0x2e2c32}),dk.length);
+  dk.forEach((p,i)=>dkM.setMatrixAt(i,mat4(p.x,groundHeight(p.x,p.z)-3+rnd()*3,p.z,0,rnd()*3,0,1,.8+rnd()*.6)));scene.add(dkM);reg(dkM,'dike');
+  // ---- Elvaren margins (7 pastel fences)
+  for(let m=0;m<7;m++){const R=RMARG+30*m,n=Math.round(2*Math.PI*R/9),col=new THREE.Color(PASTEL[m]);
+    const pm=new THREE.InstancedMesh(new THREE.BoxGeometry(.5,4.5,.5),new THREE.MeshLambertMaterial({color:col,emissive:col,emissiveIntensity:.35}),n);
+    const top=[],mid=[];for(let i=0;i<n;i++){const a=i/n*360,p=P(R,a),y=groundHeight(p.x,p.z);pm.setMatrixAt(i,mat4(p.x,y+2.2,p.z));top.push(p.x,y+4.2,p.z);mid.push(p.x,y+2,p.z);}
+    top.push(top[0],top[1],top[2]);mid.push(mid[0],mid[1],mid[2]);scene.add(pm);reg(pm,'margin-'+(m+1));
+    for(const arr of[top,mid]){const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.Float32BufferAttribute(arr,3));const ln=new THREE.Line(lg,new THREE.LineBasicMaterial({color:col}));scene.add(ln);reg(ln,'margin-'+(m+1));}
+    const lp=P(R+15,138+m*5);addLabel('Lề '+ROMAN[m],lp.setY(groundHeight(lp.x,lp.z)+12),'margin');}
+  // ---- trees (instanced)
+  const pineSpots=[],oakSpots=[];const want={nyrkvold:1500,nerith:140,valen:90,dvelskarn:70,hjarnvang:35,iskhjarn:0,outlands:0};
+  for(let tries=0;tries<26000;tries++){const r=Math.sqrt(rnd())*1440,a=rnd()*360,p=P(r,a);const b=biomeAt(p.x,p.z);
+    const st=structAt(p.x,p.z);if(st.wall>.05||st.dike>.05)continue;if(r>200){const q=riverQuery(p.x,p.z);if(q.d<q.w+5)continue;}if(p.distanceTo(KRAG)<120)continue;
+    if(want[b]>0){want[b]--;pineSpots.push(p);}else if((b==='gremvang'||b==='outlands'||b==='hrimmark'||b==='kessaren')&&oakSpots.length<260&&rnd()<.04)oakSpots.push(p);}
+  const pineM=new THREE.InstancedMesh(B.pineGeo(true),new THREE.MeshLambertMaterial({vertexColors:true}),pineSpots.length);
+  pineSpots.forEach((p,i)=>{const s=biomeAt(p.x,p.z)==='nyrkvold'?1.1+rnd()*.7:.8+rnd()*.4;pineM.setMatrixAt(i,mat4(p.x,groundHeight(p.x,p.z)-.3,p.z,0,rnd()*6,0,s,s*1.25));});scene.add(pineM);reg(pineM,'pine');
+  const oakM=new THREE.InstancedMesh(B.oakGeo(),new THREE.MeshLambertMaterial({vertexColors:true}),oakSpots.length);
+  oakSpots.forEach((p,i)=>oakM.setMatrixAt(i,mat4(p.x,groundHeight(p.x,p.z)-.2,p.z,0,rnd()*6,0,1+rnd()*.6)));scene.add(oakM);reg(oakM,'oak');
+  // ---- Kraghaven + fields + faceless shadows
+  const kv=B.settlement(7);place(kv,KRAG.x,KRAG.z,-.2);reg(kv,'kraghaven');
+  const ryeSpots=[];for(const [cx,cz] of [[52,40],[-52,40],[52,-40],[-52,-40]])for(let n=0;n<1100;n++)ryeSpots.push([KRAG.x+cx+rr(-28,28),KRAG.z+cz+rr(-20,20)]);
+  const ryeM=new THREE.InstancedMesh(B.ryeGeo(),new THREE.MeshLambertMaterial({vertexColors:true}),ryeSpots.length);
+  ryeSpots.forEach(([x,z],i)=>ryeM.setMatrixAt(i,mat4(x,groundHeight(x,z)-.1,z,(rnd()-.5)*.25,rnd()*6,(rnd()-.5)*.25,.9+rnd()*.4)));scene.add(ryeM);reg(ryeM,'rye');
+  [[86,30],[-40,-66],[-86,-28],[30,66]].forEach(([dx,dz])=>{const g=B.faceless();const x=KRAG.x+dx,z=KRAG.z+dz;place(g,x,z);reg(g,'faceless');
+    const e={type:'shadow',g,pos:g.position,home:g.position.clone(),gaze:0,active:false,cool:0,r:.6};shadows.push(e);enemies.push(e);});
+  const sk=P(470,140);const skh=B.settlement(5,0x4a4a50);place(skh,sk.x,sk.z,-.2);reg(skh,'skarnhold');
+  const rm=P(828,187);const rmh=B.settlement(6,0x6a5440);place(rmh,rm.x,rm.z,-.2);reg(rmh,'rhoenmouth');
+  // ---- sampans
+  [70,120,170,215,262,300].forEach(idx=>{const s=river[idx];const b=B.sampan();const off=s.w*.45;b.position.set(s.x-s.tz*off,s.h+.1,s.z+s.tx*off);b.rotation.y=Math.atan2(s.tx,s.tz);scene.add(b);reg(b,'sampan');
+    sampans.push({g:b,yaw:b.rotation.y});marker('⛵','#c9a55a','sampan',b.position,18);});
+  // ---- Tall entity
+  const tp=P(470,90);const tg=B.tall();place(tg,tp.x,tp.z);reg(tg,'tall');tallE={type:'tall',g:tg,pos:tg.position,home:tg.position.clone(),summon:0,r:1.5};enemies.push(tallE);
+  // ---- The Murk
+  const mpp=P(760,90);const mg=B.murk();place(mg,mpp.x,mpp.z,1);reg(mg,'murk');murkE={type:'murk',g:mg,pos:mg.position,home:mg.position.clone(),scatter:0,r:4};enemies.push(murkE);
+  // ---- Mawbriar
+  const mawZones=[[305,355,640,860,7],[245,295,640,860,4],[186,234,380,580,8]];
+  mawZones.forEach(([a0,a1,r0,r1,n])=>{for(let i=0;i<n;i++){let p;for(let t=0;t<20;t++){p=P(rr(r0,r1),rr(a0,a1));const q=riverQuery(p.x,p.z);const st=structAt(p.x,p.z);if(st.dike<.05&&q.d>q.w+3)break;}
+    const g=B.mawbriar();g.scale.setScalar(1.6);place(g,p.x,p.z);reg(g,'mawbriar');enemies.push({type:'maw',g,pos:g.position,hp:3,open:0,bite:0,r:1.4,alive:true});}});
+  // ---- Kvernling packs
+  [[740,25],[800,45],[480,330],[470,270],[700,330]].forEach(([r,a],pi)=>{const home=P(r,a);home.y=groundHeight(home.x,home.z);
+    for(let i=0;i<6;i++){const g=B.kvernling();g.scale.setScalar(1.5);place(g,home.x+rr(-6,6),home.z+rr(-6,6));reg(g,'kvernling');
+      enemies.push({type:'kvern',g,pos:g.position,home:home.clone(),vel:new THREE.Vector3(),hp:1,r:.6,alive:true,t:rnd()*10,bite:0});}
+    if(pi<5)marker('✶','#d24a3a','kvernling',home,22);});
+  // ---- singularity
+  singularity=B.singularity();singularity.position.set(0,290,0);scene.add(singularity);reg(singularity,'singularity');
+  // ---- markers for map
+  marker('☗','#e8dcc4','kraghaven',KRAG,34);marker('☗','#e8dcc4','skarnhold',skh.position,34);marker('☗','#e8dcc4','rhoenmouth',rmh.position,34);
+  marker('◉','#d24a3a','faceless',shadows[0].home,24);marker('✶','#d24a3a','tall',tallE.home,40);marker('☁','#d24a3a','murk',murkE.home,30);
+  const gp=(r,a)=>{const p=P(r,a);p.y=groundHeight(p.x,p.z);return p;};marker('✿','#d24a3a','mawbriar',gp(760,330),22);marker('✿','#d24a3a','mawbriar',gp(480,210),22);
+  marker('❄','#9fc3d8','cave',cv.position,30);scene.add(markers);
+  // ---- labels
+  for(const id in BIOME_DEF){const d=BIOME_DEF[id];if(d.props==='margin')continue;const p=biomeCentroid(id);p.y+=id==='ithuun'?120:24;addLabel(d.name.split(' —')[0],p);}
+  addLabel('Sông Rhoenos',new THREE.Vector3(river[330].x,river[330].h+16,river[330].z),'mono');
+  addLabel('Vòng Thành',P(RO,30).setY(60),'mono');
+}
+
+/* =====================================================================
+   LEGEND (zoom-to-region list)
+   ===================================================================== */
+function buildLegend(){const L=document.getElementById('legend');let h='';
+  const sec=(title,ids)=>{h+=`<h3>${title}</h3>`;ids.forEach(id=>{const d=BIOME_DEF[id];h+=`<div class="ri" data-id="${id}"><span class="sw" style="background:${d.color}"></span>${d.name.split(' —')[0]}</div>`;});};
+  sec('Inner Ring · 2000–5000 m',INNER_IDS);sec('Middle Ring · 400–2000 m',MIDDLE_IDS);sec('Outer Ring · 0–400 m',OUTER_IDS);sec('Caldera & Beyond',['ithuun','outlands','margin-1','margin-4','margin-7']);
+  h+='<div class="note">Six radial dikes (Nan hoa) divide six sectors; the Fault Wall (Vòng thành) has six gates opening onto the menhir wings of the Star.</div>';L.innerHTML=h;
+  L.querySelectorAll('.ri').forEach(el=>el.onclick=()=>{if(mode==='map'){const p=biomeCentroid(el.dataset.id);zoomTo(p,el.dataset.id==='ithuun'?520:380);}});}
+
+/* =====================================================================
+   PICKING / HOVER TAG
+   ===================================================================== */
+const raycaster=new THREE.Raycaster();raycaster.params.Line.threshold=3;raycaster.params.Points.threshold=2;
+function marchTerrain(o,d,maxT){let t=0,prev=0,step=mode==='map'?5:1.2;
+  for(;t<maxT;t+=step){const x=o.x+d.x*t,y=o.y+d.y*t,z=o.z+d.z*t;
+    if(Math.abs(x)<WORLD&&Math.abs(z)<WORLD&&y<groundHeight(x,z)){let lo=prev,hi=t;for(let i=0;i<10;i++){const m=(lo+hi)/2;if(o.y+d.y*m<groundHeight(o.x+d.x*m,o.z+d.z*m))hi=m;else lo=m;}return hi;}
+    prev=t;if(mode==='map')step=Math.max(4,t*.004);}return null;}
+function visibleChain(o){while(o){if(!o.visible)return false;o=o.parent;}return true;}
+function pickAt(ndc,maxT){raycaster.setFromCamera(ndc,camera);const o=raycaster.ray.origin,d=raycaster.ray.direction;
+  const tt=marchTerrain(o,d,maxT);raycaster.far=tt!==null?tt+.5:maxT;
+  const hits=raycaster.intersectObjects(pickables,true);for(const h of hits){if(visibleChain(h.object)&&h.object.userData.loreId)return {id:h.object.userData.loreId,point:h.point.clone()};}
+  if(tt===null)return null;const p=o.clone().addScaledVector(d,tt);return {id:terrainIdAt(p.x,p.z),point:p};}
+function terrainIdAt(x,z){const st=structAt(x,z);if(st.wall>.35)return 'faultwall';if(st.dike>.35)return 'dike';const r=Math.hypot(x,z);if(r>200){const q=riverQuery(x,z);if(q.d<q.w)return 'rhoenos';}return biomeAt(x,z);}
+const tagEl=document.getElementById('tag');let tag={id:null,point:null,x:0,y:0,overTag:false,cand:null,candT:0,lastSeen:0};
+const mouse={x:0,y:0,ndc:new THREE.Vector2(),moved:false,down:false};
+renderer.domElement.addEventListener('pointermove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;mouse.ndc.set(e.clientX/innerWidth*2-1,-e.clientY/innerHeight*2+1);mouse.moved=true;});
+renderer.domElement.addEventListener('pointerdown',()=>{mouse.down=true;});window.addEventListener('pointerup',()=>{mouse.down=false;});
+tagEl.addEventListener('mouseenter',()=>tag.overTag=true);tagEl.addEventListener('mouseleave',()=>tag.overTag=false);
+tagEl.addEventListener('click',()=>{if(tag.id){openCodex(tag.id,tag.point);hideTag();}});
+function hideTag(){tagEl.style.display='none';tag.id=null;tag.overTag=false;}
+let pickClock=0;
+function mapPick(dt){pickClock+=dt;if(tag.overTag||codexOpen||tween)return;if(mouse.down){hideTag();return;}
+  if(pickClock<.09||!mouse.moved)return;pickClock=0;mouse.moved=false;
+  const res=pickAt(mouse.ndc,9000);const now=performance.now();
+  if(!res){if(now-tag.lastSeen>700)hideTag();return;}
+  tag.lastSeen=now;
+  if(res.id!==tag.cand){tag.cand=res.id;tag.candT=now;}
+  const show=()=>{tag.id=res.id;tag.point=res.point;tag.x=mouse.x;tag.y=mouse.y;const L=LORE[res.id];tagEl.innerHTML=(L?L.name:res.id)+'<small>codex ›</small>';
+    tagEl.style.display='block';tagEl.style.left=Math.min(innerWidth-tagEl.offsetWidth-6,mouse.x+8)+'px';tagEl.style.top=(mouse.y+8)+'px';};
+  if(!tag.id||(res.id===tag.cand&&now-tag.candT>260&&res.id!==tag.id))show();
+  else if(res.id===tag.id){tag.point=res.point;if(Math.hypot(mouse.x-tag.x,mouse.y-tag.y)>90)show();}}
+
+/* =====================================================================
+   CODEX MODAL + 3D INSPECTOR
+   ===================================================================== */
+let codexOpen=false,codexEntry=null,codexPoint=null,insp=null;
+function initInspector(){const cv=document.getElementById('cx-canvas');const r=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});r.setPixelRatio(Math.min(devicePixelRatio,2));
+  const sc=new THREE.Scene();const cam=new THREE.PerspectiveCamera(38,1,.05,200);sc.add(new THREE.HemisphereLight(0xcfd8e8,0x30261e,.75));
+  const d=new THREE.DirectionalLight(0xffe6c8,1.1);d.position.set(4,8,6);sc.add(d);const rim=new THREE.DirectionalLight(0x8090ff,.6);rim.position.set(-6,3,-6);sc.add(rim);
+  const disc=mesh(new THREE.CylinderGeometry(4.6,4.9,.12,48),M(0x1a1619,{roughness:1}),0,-.06,0);sc.add(disc);
+  const ring=mesh(new THREE.TorusGeometry(4.75,.03,4,64),new THREE.MeshBasicMaterial({color:0xc9a55a}),0,0,0);ring.rotation.x=Math.PI/2;sc.add(ring);
+  const pivot=new THREE.Group();sc.add(pivot);insp={r,sc,cam,pivot,model:null,rotY:.6,rotX:.35,dist:10,drag:false,lx:0,ly:0,idle:0,t:0};
+  cv.addEventListener('pointerdown',e=>{insp.drag=true;insp.lx=e.clientX;insp.ly=e.clientY;cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';});
+  cv.addEventListener('pointermove',e=>{if(!insp.drag)return;insp.rotY+=(e.clientX-insp.lx)*.01;insp.rotX=Math.max(-.2,Math.min(1.3,insp.rotX+(e.clientY-insp.ly)*.008));insp.lx=e.clientX;insp.ly=e.clientY;insp.idle=0;});
+  cv.addEventListener('pointerup',()=>{insp.drag=false;cv.style.cursor='grab';});
+  cv.addEventListener('wheel',e=>{e.preventDefault();insp.dist=Math.max(4,Math.min(26,insp.dist*(1+Math.sign(e.deltaY)*.1)));},{passive:false});}
+function openCodex(id,point){const L=LORE[id];if(!L)return;if(!insp)initInspector();codexOpen=true;codexEntry=L;codexPoint=point||null;
+  document.getElementById('cx-cls').textContent=L.cls;document.getElementById('cx-name').textContent=L.name;document.getElementById('cx-sub').textContent=L.ring;
+  document.getElementById('cx-c').textContent=L.cls;document.getElementById('cx-r').textContent=L.ring;document.getElementById('cx-l').textContent=L.lang;
+  document.getElementById('cx-desc').textContent=L.desc;document.getElementById('cx-habits').textContent=L.habits;document.getElementById('cx-counter').textContent=L.counter;
+  document.getElementById('cx-zoom').style.display=mode==='map'?'':'none';document.getElementById('cx-descend').style.display=mode==='map'?'':'none';
+  if(insp.model){insp.pivot.remove(insp.model);insp.model.traverse(o=>{if(o.geometry)o.geometry.dispose();});}
+  const m=L.build();const box=new THREE.Box3().setFromObject(m),size=box.getSize(new THREE.Vector3()),ctr=box.getCenter(new THREE.Vector3());
+  const s=7/Math.max(size.x,size.y,size.z);const wrap=new THREE.Group();m.position.sub(new THREE.Vector3(ctr.x,box.min.y,ctr.z));wrap.add(m);wrap.scale.setScalar(s);wrap.userData.anim=m.userData.anim;
+  insp.pivot.add(wrap);insp.model=wrap;insp.dist=11;insp.rotY=.6;insp.rotX=.32;insp.focusY=size.y*s*.45;
+  document.getElementById('codex').classList.add('open');if(document.pointerLockElement)document.exitPointerLock();resizeInspector();}
+function resizeInspector(){if(!insp)return;const cv=insp.r.domElement;const w=cv.clientWidth||400,h=cv.clientHeight||340;insp.r.setSize(w,h,false);insp.cam.aspect=w/h;insp.cam.updateProjectionMatrix();}
+function renderInspector(dt){insp.t+=dt;insp.idle+=dt;if(!insp.drag&&insp.idle>1.5)insp.rotY+=dt*.35;
+  const c=insp.cam,f=insp.focusY||2;c.position.set(Math.sin(insp.rotY)*Math.cos(insp.rotX)*insp.dist,f+Math.sin(insp.rotX)*insp.dist,Math.cos(insp.rotY)*Math.cos(insp.rotX)*insp.dist);c.lookAt(0,f,0);
+  if(insp.model&&insp.model.userData.anim)insp.model.userData.anim(insp.t);insp.r.render(insp.sc,c);}
+function closeCodex(){codexOpen=false;document.getElementById('codex').classList.remove('open');if(mode==='fp'&&!dead)showPause(true);}
+document.getElementById('cx-close').onclick=closeCodex;
+document.getElementById('codex').addEventListener('click',e=>{if(e.target.id==='codex')closeCodex();});
+document.getElementById('cx-zoom').onclick=()=>{const p=regionPos(codexEntry);closeCodex();zoomTo(p,codexEntry.kind==='biome'||!codexEntry.kind?380:110);};
+document.getElementById('cx-descend').onclick=()=>{const p=regionPos(codexEntry);closeCodex();descendTo(p.clone().add(new THREE.Vector3(9,0,9)));};
+function regionPos(L){if(L.kind==='biome')return biomeCentroid(L.id);if(codexPoint)return codexPoint.clone();return biomeCentroid(OUTER_IDS[0]);}
+
+/* =====================================================================
+   CAMERA TWEENS (zoom-to-region, seamless descent)
+   ===================================================================== */
+let tween=null;const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+function zoomTo(pos,dist){const dir=camera.position.clone().sub(controls.target).normalize();dir.y=Math.max(dir.y,.6);dir.normalize();
+  tween={fp:camera.position.clone(),ft:controls.target.clone(),tp:pos.clone().addScaledVector(dir,dist),tt:pos.clone(),t:0,dur:1.4};}
+function descendTo(p){hideTag();initAudio();savedMap={p:camera.position.clone(),t:controls.target.clone()};const x=p.x,z=p.z;let q=riverQuery(x,z);let px=x,pz=z;if(q.d<q.w+2){px+= -q.tz*(q.w+6);pz+=q.tx*(q.w+6);}
+  const y=groundHeight(px,pz);const dx=-px,dz=-pz,l=Math.hypot(dx,dz)||1;const yaw=Math.atan2(-dx/l,-dz/l);
+  const eye=new THREE.Vector3(px,y+1.7,pz);const look=eye.clone().add(new THREE.Vector3(-Math.sin(yaw)*20,0,-Math.cos(yaw)*20));
+  tween={fp:camera.position.clone(),ft:controls.target.clone(),tp:eye,tt:look,t:0,dur:2.0,done:()=>enterFP(px,pz,yaw)};}
+
+/* =====================================================================
+   PLAYER / FIRST-PERSON
+   ===================================================================== */
+let mode='map',paused=false,dead=false,mapNight=false,dayT=.42;
+const player={pos:new THREE.Vector3(),vy:0,yaw:0,pitch:0,onGround:true,hp:100,sanity:100,stamina:100,weapon:1,boat:null,boatVel:new THREE.Vector3(),draw:0,drawing:false,slashT:-1,slashCd:0,bob:0,lastHit:''};
+const keys={};let savedMap=null;
+const viewModel=new THREE.Group();camera.add(viewModel);viewModel.visible=false;
+const sword=(()=>{const g=new THREE.Group();g.add(mesh(new THREE.BoxGeometry(.055,.95,.018),M(0xb8bcc4,{metalness:.85,roughness:.28}),0,.6,0));
+  g.add(mesh(new THREE.ConeGeometry(.04,.12,4),M(0xb8bcc4,{metalness:.85,roughness:.28}),0,1.13,0));g.add(mesh(new THREE.BoxGeometry(.3,.045,.06),M(0x6a5a3a,{metalness:.6}),0,.12,0));
+  g.add(mesh(new THREE.CylinderGeometry(.024,.026,.22,6),M(0x3a2414),0,0,0));g.add(mesh(new THREE.SphereGeometry(.038,8,6),M(0x6a5a3a,{metalness:.6}),0,-.13,0));return g;})();
+const bow=(()=>{const g=new THREE.Group();const R=.48;const ag=new THREE.TorusGeometry(R,.018,5,26,2.4);ag.rotateZ(-1.2);ag.rotateY(Math.PI/2);g.add(new THREE.Mesh(ag,M(0x5a3a1e)));
+  const ex=Math.cos(1.2)*R,ey=Math.sin(1.2)*R;const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.Float32BufferAttribute([0,ey,-ex,0,0,-ex,0,-ey,-ex],3));
+  const str=new THREE.Line(sg,new THREE.LineBasicMaterial({color:0xd8d0c0}));g.add(str);g.userData.str=str;g.userData.ex=ex;
+  const nock=makeArrowMesh();nock.position.set(0,0,-ex-.35);g.add(nock);g.userData.nock=nock;return g;})();
+function makeArrowMesh(){const g=new THREE.Group();const sh=new THREE.CylinderGeometry(.012,.012,.85,4);sh.rotateX(Math.PI/2);g.add(new THREE.Mesh(sh,M(0x8a6a40)));
+  const hd=new THREE.ConeGeometry(.03,.1,4);hd.rotateX(Math.PI/2);g.add(mesh(hd,M(0x777777,{metalness:.7}),0,0,.47));
+  const fl=new THREE.BoxGeometry(.002,.05,.12);g.add(mesh(fl,M(0xd8d0c0),0,0,-.38));return g;}
+viewModel.add(sword,bow);sword.scale.setScalar(.5);bow.scale.setScalar(.75);sword.position.set(.36,-.36,-.62);bow.position.set(.18,-.22,-.55);bow.rotation.z=.15;
+function setWeapon(w){player.weapon=w;sword.visible=w===1;bow.visible=w===2;player.drawing=false;player.draw=0;document.getElementById('w1').className=w===1?'on':'';document.getElementById('w2').className=w===2?'on':'';}
+setWeapon(1);
+function enterFP(x,z,yaw){mode='fp';dead=false;savedMap=savedMap||{p:new THREE.Vector3(0,1750,1550),t:new THREE.Vector3(0,60,0)};
+  controls.enabled=false;markers.visible=false;viewModel.visible=true;camera.fov=72;camera.near=.08;camera.far=3200;camera.updateProjectionMatrix();camera.rotation.order='YXZ';
+  player.pos.set(x,groundHeight(x,z),z);player.yaw=yaw;player.pitch=0;player.vy=0;player.boat=null;
+  if(player.hp<=0){player.hp=100;player.sanity=100;}
+  dayT=.62;scene.fog.near=40;scene.fog.far=600;document.getElementById('hud').style.display='block';document.getElementById('topbar').style.display='none';document.getElementById('legend').style.display='none';document.getElementById('mapHelp').style.display='none';
+  hideTag();initAudio();document.getElementById('labels').style.display='none';showPause(true);requestLock();}
+function exitFP(){mode='map';paused=false;if(document.pointerLockElement)document.exitPointerLock();player.boat=null;
+  controls.enabled=true;markers.visible=true;viewModel.visible=false;camera.fov=50;camera.near=1;camera.far=9000;camera.updateProjectionMatrix();camera.rotation.order='XYZ';
+  camera.position.copy(savedMap?savedMap.p:new THREE.Vector3(0,1750,1550));controls.target.copy(savedMap?savedMap.t:new THREE.Vector3(0,60,0));controls.update();
+  document.getElementById('hud').style.display='none';['topbar','mapHelp'].forEach(i=>document.getElementById(i).style.display='flex');document.getElementById('mapHelp').style.display='block';
+  if(innerWidth>700)document.getElementById('legend').style.display='block';showPause(false);document.getElementById('death').style.display='none';setTerror(0);dayT=mapNight?.03:.42;
+  shadows.forEach(s=>{s.active=false;s.gaze=0;s.pos.copy(s.home);s.g.userData.face.visible=false;});tallE.pos.copy(tallE.home);tallE.g.scale.setScalar(1);murkE.pos.copy(murkE.home);}
+function requestLock(){const p=renderer.domElement.requestPointerLock&&renderer.domElement.requestPointerLock();if(p&&p.catch)p.catch(()=>{});}
+function showPause(v){paused=v;document.getElementById('pause').style.display=v?'flex':'none';}
+document.addEventListener('pointerlockchange',()=>{if(mode!=='fp')return;if(document.pointerLockElement){showPause(false);}else if(!codexOpen&&!dead)showPause(true);});
+document.getElementById('bResume').onclick=e=>{e.stopPropagation();requestLock();showPause(false);};
+document.getElementById('pause').addEventListener('click',()=>{requestLock();showPause(false);});
+document.addEventListener('mousemove',e=>{if(mode!=='fp'||!document.pointerLockElement)return;player.yaw-=e.movementX*.0022;player.pitch=Math.max(-1.5,Math.min(1.5,player.pitch-e.movementY*.0022));});
+renderer.domElement.addEventListener('mousedown',e=>{initAudio();if(mode!=='fp')return;if(!document.pointerLockElement){requestLock();return;}
+  if(e.button!==0||paused)return;if(player.weapon===1){if(player.slashCd<=0){player.slashT=0;player.slashCd=.45;sfx('swing');}}else{player.drawing=true;}});
+window.addEventListener('mouseup',e=>{if(mode!=='fp'||e.button!==0)return;if(player.weapon===2&&player.drawing){fireArrow();player.drawing=false;player.draw=0;}});
+renderer.domElement.addEventListener('contextmenu',e=>e.preventDefault());
+renderer.domElement.addEventListener('dblclick',()=>{if(mode!=='map'||tween)return;const r=pickAt(mouse.ndc,9000);if(r)descendTo(r.point);});
+window.addEventListener('keydown',e=>{keys[e.code]=true;
+  if(e.code==='KeyL'&&mode==='map'){labelsOn=!labelsOn;}
+  if(e.code==='Escape'&&codexOpen){closeCodex();}
+  if(mode!=='fp')return;
+  if(e.code==='KeyM'){exitFP();return;}
+  if(paused||dead)return;
+  if(e.code==='Digit1')setWeapon(1);if(e.code==='Digit2')setWeapon(2);
+  if(e.code==='KeyF')toggleBoat();
+  if(e.code==='KeyN')dayT=(dayT+.1)%1;
+  if(e.code==='KeyE'&&fpTarget)openCodex(fpTarget.id,fpTarget.point);
+  if(e.code==='Space')e.preventDefault();});
+window.addEventListener('keyup',e=>{keys[e.code]=false;});
+
+function canStep(x0,z0,x1,z1){if(Math.hypot(x1,z1)>WORLD-40)return false;const g0=groundHeight(x0,z0),g1=groundHeight(x1,z1),d=Math.hypot(x1-x0,z1-z0);return g1-g0<=d*1.6+.08||g1<=player.pos.y-.2;}
+function updatePlayer(dt){
+  if(player.boat){updateBoat(dt);return;}
+  const f=new THREE.Vector3(-Math.sin(player.yaw),0,-Math.cos(player.yaw)),r=new THREE.Vector3(Math.cos(player.yaw),0,-Math.sin(player.yaw));
+  const mv=new THREE.Vector3();if(keys.KeyW)mv.add(f);if(keys.KeyS)mv.sub(f);if(keys.KeyD)mv.add(r);if(keys.KeyA)mv.sub(r);
+  let speed=7;const moving=mv.lengthSq()>0;const sprint=(keys.ShiftLeft||keys.ShiftRight)&&moving&&player.stamina>1;
+  if(sprint){speed=13;player.stamina=Math.max(0,player.stamina-20*dt);}else player.stamina=Math.min(100,player.stamina+13*dt);
+  const q=riverQuery(player.pos.x,player.pos.z);const inWater=q.d<q.w&&player.pos.y<q.h+.3;if(inWater)speed*=.45;
+  if(moving){mv.normalize().multiplyScalar(speed*dt);const p=player.pos;
+    if(canStep(p.x,p.z,p.x+mv.x,p.z+mv.z)){p.x+=mv.x;p.z+=mv.z;}else if(canStep(p.x,p.z,p.x+mv.x,p.z)){p.x+=mv.x;}else if(canStep(p.x,p.z,p.x,p.z+mv.z)){p.z+=mv.z;}
+    player.bob+=dt*speed*1.4;}
+  const g=groundHeight(player.pos.x,player.pos.z);
+  if(keys.Space&&player.onGround){player.vy=7.5;player.onGround=false;}
+  player.vy-=24*dt;player.pos.y+=player.vy*dt;
+  if(player.pos.y<=g||(player.onGround&&player.pos.y-g<.7&&player.vy<=0)){player.pos.y=g;player.vy=0;player.onGround=true;}else player.onGround=false;
+  const bob=player.onGround&&moving?Math.sin(player.bob)*.06:0;
+  camera.position.set(player.pos.x,player.pos.y+1.7+bob+(inWater?-.5:0),player.pos.z);camera.rotation.set(player.pitch,player.yaw,0);
+}
+function nearestSampan(){let best=null,bd=7;for(const s of sampans){const d=s.g.position.distanceTo(player.pos);if(d<bd){bd=d;best=s;}}return best;}
+function toggleBoat(){if(player.boat){const b=player.boat.g.position,q=riverQuery(b.x,b.z);
+    const tryside=sg=>{const x=b.x-q.tz*(q.w+3)*sg,z=b.z+q.tx*(q.w+3)*sg;return {x,z,y:groundHeight(x,z)};};const a=tryside(1),c=tryside(-1);const pick=Math.abs(a.y-q.h)<Math.abs(c.y-q.h)?a:c;
+    player.pos.set(pick.x,pick.y,pick.z);player.boat=null;player.vy=0;return;}
+  const s=nearestSampan();if(s){player.boat=s;player.boatVel.set(0,0,0);}}
+function updateBoat(dt){const b=player.boat,p=b.g.position;const f=new THREE.Vector3(-Math.sin(player.yaw),0,-Math.cos(player.yaw));
+  const acc=new THREE.Vector3();if(keys.KeyW)acc.add(f);if(keys.KeyS)acc.sub(f);acc.multiplyScalar(14);
+  const q=riverQuery(p.x,p.z);acc.x+=q.tx*1.5;acc.z+=q.tz*1.5;
+  player.boatVel.addScaledVector(acc,dt);player.boatVel.multiplyScalar(Math.exp(-1.2*dt));if(player.boatVel.length()>10)player.boatVel.setLength(10);
+  const nx=p.x+player.boatVel.x*dt,nz=p.z+player.boatVel.z*dt;const q2=riverQuery(nx,nz);
+  if(q2.d<q2.w-1.1){p.x=nx;p.z=nz;}else{const s=q2.s;p.x+=(s.x-p.x)*.08;p.z+=(s.z-p.z)*.08;player.boatVel.multiplyScalar(.4);}
+  const q3=riverQuery(p.x,p.z);p.y=q3.h+.1+Math.sin(clockT*2)*.05;
+  if(player.boatVel.lengthSq()>.3){const ty=Math.atan2(player.boatVel.x,player.boatVel.z);let d=ty-b.g.rotation.y;d=Math.atan2(Math.sin(d),Math.cos(d));b.g.rotation.y+=d*Math.min(1,dt*2.5);}
+  b.g.rotation.z=Math.sin(clockT*1.7)*.03;player.pos.copy(p);
+  camera.position.set(p.x,p.y+1.45,p.z);camera.rotation.set(player.pitch,player.yaw,0);}
+
+/* ---------------- combat ---------------- */
+const arrows=[];
+function fireArrow(){const pw=Math.max(.15,player.draw);const d=new THREE.Vector3();camera.getWorldDirection(d);const m=makeArrowMesh();m.position.copy(camera.position).addScaledVector(d,.7).add(new THREE.Vector3(0,-.08,0));
+  scene.add(m);arrows.push({m,vel:d.multiplyScalar(30+70*pw),stuck:false,life:12});sfx('twang');}
+function enemyCenter(e){return e.pos.clone().add(new THREE.Vector3(0,e.type==='kvern'?.4:e.type==='maw'?1.2:e.type==='murk'?1.5:1.5,0));}
+function hitEnemy(e,dmg,dir,src){if(e.type==='shadow'){relocateShadow(e);return true;}if(e.type==='tall')return false;
+  if(e.type==='murk'){if(src==='arrow')return false;e.scatter=3;return true;}
+  if(!e.alive)return false;e.hp-=dmg;sfx('hit');flashCross();if(e.vel)e.vel.addScaledVector(dir,e.type==='kvern'?16:0);
+  if(e.type==='maw'){e.recoil=.3;}if(e.hp<=0){e.alive=false;e.dieT=0;}return true;}
+function slashHits(){const f=new THREE.Vector3();camera.getWorldDirection(f);const eye=camera.position;
+  for(const e of enemies){const c=enemyCenter(e);const v=c.clone().sub(eye);const d=v.length();if(d>(e.type==='murk'?7:4.6))continue;v.normalize();if(v.dot(f)<.35&&d>1.2)continue;
+    const dir=new THREE.Vector3(v.x,0,v.z).normalize();hitEnemy(e,1.5,dir,'sword');}}
+function updateArrows(dt){for(let i=arrows.length-1;i>=0;i--){const a=arrows[i];a.life-=dt;if(a.life<=0){scene.remove(a.m);arrows.splice(i,1);continue;}if(a.stuck)continue;
+  a.vel.y-=22*dt;const step=a.vel.clone().multiplyScalar(dt);const n=Math.ceil(step.length()/1.2);
+  for(let k=0;k<n&&!a.stuck;k++){a.m.position.addScaledVector(step,1/n);const p=a.m.position;
+    if(p.y<groundHeight(p.x,p.z)){a.stuck=true;a.life=Math.min(a.life,8);break;}
+    for(const e of enemies){if((e.alive===false)||e.type==='tall')continue;if(enemyCenter(e).distanceTo(p)<e.r+.3){if(hitEnemy(e,2,a.vel.clone().setY(0).normalize(),'arrow')){scene.remove(a.m);arrows.splice(i,1);a.stuck=true;a.gone=true;}break;}}}
+  if(!a.gone)a.m.lookAt(a.m.position.clone().add(a.vel));}}
+let crossT=0;function flashCross(){crossT=.15;}
+function updateWeapons(dt){player.slashCd-=dt;
+  if(player.slashT>=0){player.slashT+=dt/.3;const p=Math.min(1,player.slashT),e=ease(p);sword.rotation.set(-.5-Math.sin(p*Math.PI)*1.1,0,-1.1+e*2.7);sword.position.set(.42-e*.6,-.3+Math.sin(p*Math.PI)*.1,-.62);
+    if(!player.slashDone&&p>.4){player.slashDone=true;slashHits();}if(p>=1){player.slashT=-1;player.slashDone=false;}}
+  else{sword.rotation.set(-.45,0,-.3+Math.sin(clockT*1.5)*.02);sword.position.set(.36,-.36,-.62);}
+  if(player.drawing)player.draw=Math.min(1,player.draw+dt/.9);
+  const ex=bow.userData.ex,pz=-ex+player.draw*.32;const sa=bow.userData.str.geometry.attributes.position;sa.setZ(1,pz);sa.needsUpdate=true;
+  bow.userData.nock.position.z=pz-.42;bow.userData.nock.visible=player.drawing;bow.position.z=-.55+player.draw*.05;}
+
+/* ---------------- entities ---------------- */
+let terror=0,warnText='',fpTarget=null,regionId='';
+function relocateShadow(s){const a=rnd()*Math.PI*2;const x=KRAG.x+Math.cos(a)*90,z=KRAG.z+Math.sin(a)*75;s.pos.set(x,groundHeight(x,z),z);s.active=false;s.gaze=0;s.g.userData.face.visible=false;}
+function updateEntities(dt){const eye=camera.position,fwd=new THREE.Vector3();camera.getWorldDirection(fwd);const night=isNight();terror=0;warnText='';
+  for(const e of enemies){const dist=e.pos.distanceTo(player.pos);
+    if(e.type==='shadow'){if(dist>220)continue;e.g.rotation.y=Math.atan2(player.pos.x-e.pos.x,player.pos.z-e.pos.z);
+      const head=e.pos.clone().add(new THREE.Vector3(0,2.95,0));const to=head.sub(eye);const dd=to.length();to.divideScalar(dd);const dot=fwd.dot(to);
+      const staring=dd<170&&dot>Math.cos(Math.max(4,Math.min(12,90/dd))*DEG);
+      if(staring)e.gaze+=dt;else e.gaze=Math.max(0,e.gaze-dt*1.2);
+      if(!e.active&&e.gaze>2.5){e.active=true;e.cool=0;e.g.userData.face.visible=true;sfx('sting');const v=player.pos.clone().sub(e.pos).setY(0);const L=v.length();if(L>8){e.pos.addScaledVector(v.normalize(),L-Math.max(6,L*.18));e.pos.y=groundHeight(e.pos.x,e.pos.z);}}
+      if(e.active){if(staring){terror=Math.max(terror,1);player.sanity-=16*dt;player.hp-=5*dt;player.lastHit='The Faceless Shadow smiled at you.';warnText='ĐỪNG NHÌN — LOOK AWAY';e.cool=0;e.g.userData.face.scale.setScalar(1+Math.random()*.08);}
+        else{e.cool+=dt;terror=Math.max(terror,.45*(1-e.cool/3));if(e.cool>3)relocateShadow(e);}}
+      else terror=Math.max(terror,Math.min(.3,e.gaze/2.5*.3));}
+    else if(e.type==='tall'){const inForest=regionId==='nyrkvold';
+      if(inForest&&night&&player.pitch>.5){e.summon+=dt;if(e.summon>.4){if(!e.placed){const hf=new THREE.Vector3(-Math.sin(player.yaw),0,-Math.cos(player.yaw));const x=player.pos.x+hf.x*13,z=player.pos.z+hf.z*13;e.pos.set(x,groundHeight(x,z),z);e.g.scale.setScalar(1.7);e.placed=true;sfx('sting');}
+          e.g.rotation.y=Math.atan2(player.pos.x-e.pos.x,player.pos.z-e.pos.z);terror=Math.max(terror,.85);player.sanity-=11*dt;player.hp-=2.5*dt;player.lastHit='You looked up in Nyrkvøld.';warnText='ĐỪNG NGƯỚC LÊN — DON\'T LOOK UP';}}
+      else{e.summon=Math.max(0,e.summon-dt);if(e.placed&&player.pitch<.25){e.placed=false;e.pos.copy(e.home);e.g.scale.setScalar(1);}
+        if(inForest&&night)terror=Math.max(terror,.08);}}
+    else if(e.type==='murk'){e.g.userData.anim(clockT);const inMire=regionId==='kjolmyr';
+      if(e.scatter>0){e.scatter-=dt;const away=e.pos.clone().sub(player.pos).setY(0).normalize();e.pos.addScaledVector(away,6*dt);e.g.scale.setScalar(.5+.5*(1-e.scatter/3));}
+      else{e.g.scale.setScalar(1);const tgt=inMire?player.pos:e.home;const v=tgt.clone().sub(e.pos).setY(0);const L=v.length();if(L>.5){const np=e.pos.clone().addScaledVector(v.normalize(),Math.min(L,(inMire?5.8:4)*dt));if(biomeAt(np.x,np.z)==='kjolmyr'&&structAt(np.x,np.z).dike<.2){e.pos.x=np.x;e.pos.z=np.z;}}}
+      e.pos.y=groundHeight(e.pos.x,e.pos.z)+1;
+      if(inMire){terror=Math.max(terror,Math.max(0,.55-dist/120));if(dist<4.5&&e.scatter<=0){player.hp-=18*dt;player.sanity-=8*dt;terror=Math.max(terror,.7);player.lastHit='The Murk took your breath.';warnText='THE MURK — RUN';}}}
+    else if(e.type==='maw'){if(!e.alive){e.dieT+=dt;e.g.scale.setScalar(Math.max(.01,1.6*(1-e.dieT)));if(e.dieT>1)e.g.visible=false;continue;}
+      const target=dist<9?1:0;e.open+=(target-e.open)*Math.min(1,dt*6);e.g.userData.setOpen(e.open);
+      if(e.open>.6)e.g.rotation.y=Math.atan2(player.pos.x-e.pos.x,player.pos.z-e.pos.z);
+      e.bite-=dt;if(dist<3.4&&e.open>.8&&e.bite<=0){e.bite=.9;player.hp-=12;player.lastHit='A Mawbriar closed around you.';sfx('bite');document.getElementById('bloodv').style.opacity=.8;}}
+    else if(e.type==='kvern'){if(!e.alive){e.dieT+=dt;e.g.rotation.z=Math.PI;if(e.dieT>1.5)e.g.visible=false;continue;}
+      e.t+=dt;e.g.userData.anim(e.t);let tgt;const chase=dist<36&&mode==='fp';
+      if(chase)tgt=player.pos;else tgt=e.home.clone().add(new THREE.Vector3(Math.sin(e.t*.7+e.r*10)*7,0,Math.cos(e.t*.5)*7));
+      const v=tgt.clone().sub(e.pos).setY(0);const L=v.length();if(L>.8){v.normalize();const sp=chase?7.4:2;const np=e.pos.clone().addScaledVector(v,sp*dt).add(new THREE.Vector3(Math.sin(e.t*9)*.04,0,Math.cos(e.t*11)*.04));if(structAt(np.x,np.z).dike<.2){e.pos.x=np.x;e.pos.z=np.z;}e.g.rotation.y=Math.atan2(v.x,v.z);}
+      e.pos.addScaledVector(e.vel,dt);e.vel.multiplyScalar(Math.exp(-5*dt));e.pos.y=groundHeight(e.pos.x,e.pos.z);
+      e.bite-=dt;if(dist<1.1&&e.bite<=0){e.bite=1.1;player.hp-=2.5;player.lastHit='The Kvernlings stripped you.';sfx('bite');document.getElementById('bloodv').style.opacity=.5;}
+      if(chase)terror=Math.max(terror,.12);}}
+  singularity.userData.anim(clockT);
+  // passive sanity
+  const nearHome=player.pos.distanceTo(KRAG)<30||player.pos.distanceTo(LOREPOS.rhoenmouth)<30;
+  if(terror<.05){if(nearHome)player.sanity+=5*dt;else if(!night)player.sanity+=1.2*dt;else player.sanity-=.35*dt;}
+  if(player.sanity<=0){player.sanity=0;player.hp-=3*dt;player.lastHit=player.lastHit||'Your mind went out like a candle.';}
+  player.sanity=Math.min(100,player.sanity);player.hp=Math.min(100,player.hp+(terror<.05&&nearHome?3*dt:0));
+  if(player.hp<=0)die();}
+const LOREPOS={};
+function die(){if(dead)return;dead=true;player.hp=0;if(document.pointerLockElement)document.exitPointerLock();setTerror(0);
+  document.getElementById('deathP').textContent=player.lastHit||'The Forbidden Land keeps what it takes.';document.getElementById('death').style.display='flex';}
+document.getElementById('bRespawn').onclick=()=>{player.hp=100;player.sanity=100;player.stamina=100;exitFP();};
+
+/* ---------------- map-mode idle animation ---------------- */
+function idleAnim(dt){singularity.userData.anim(clockT);murkE.g.userData.anim(clockT);
+  for(const e of enemies)if(e.type==='kvern'&&e.alive){e.t+=dt;e.g.userData.anim(e.t);}}
+
+/* =====================================================================
+   DAY / NIGHT / FOG
+   ===================================================================== */
+const SKY_DAY=new THREE.Color(0x8994a0),SKY_DUSK=new THREE.Color(0x4a3640),SKY_NIGHT=new THREE.Color(0x05060c),FOG_MIRE=new THREE.Color(0x76797c),tmpC=new THREE.Color();
+function isNight(){return Math.sin(2*Math.PI*(dayT-.25))<-.05;}
+function applyLighting(dt){const el=Math.sin(2*Math.PI*(dayT-.25));const sa=2*Math.PI*(dayT-.25);
+  sun.position.set(Math.cos(sa)*1000,Math.sin(sa)*1000+80,400);sun.target.position.set(0,0,0);
+  const dayK=smooth(-.15,.35,el);sun.intensity=.12+.85*dayK;sun.color.setHSL(.08,.6,.55+.25*dayK);hemi.intensity=.22+.45*dayK;
+  if(el>.15)tmpC.copy(SKY_DUSK).lerp(SKY_DAY,smooth(.15,.5,el));else tmpC.copy(SKY_NIGHT).lerp(SKY_DUSK,smooth(-.2,.15,el));
+  stars.material.opacity=1-smooth(-.25,.05,el);
+  if(mode==='fp'){const mire=regionId==='kjolmyr';let near=40,far=mire?70:(isNight()?220:600);if(mire){near=2;}
+    const fc=tmpC.clone();if(mire)fc.lerp(FOG_MIRE,isNight()?.35:.9);
+    if(regionId==='nyrkvold'){fc.multiplyScalar(.6);far=Math.min(far,260);}
+    scene.fog.color.lerp(fc,Math.min(1,dt*2));scene.fog.near+=(near-scene.fog.near)*Math.min(1,dt*1.5);scene.fog.far+=(far-scene.fog.far)*Math.min(1,dt*1.5);scene.background.copy(scene.fog.color);}
+  else{scene.fog.color.copy(tmpC);scene.fog.near=2600;scene.fog.far=7500;scene.background.copy(tmpC);}}
+
+/* =====================================================================
+   HUD / HORROR FX
+   ===================================================================== */
+const fx=document.getElementById('fx'),fxc=fx.getContext('2d',{willReadFrequently:true}),scan=document.getElementById('scan'),vhs=document.getElementById('vhs');let terrorS=0,vhsClock=0;
+function setTerror(t){terrorS=t;if(t<=.01){renderer.domElement.style.filter='';renderer.domElement.style.transform='';fx.style.opacity=0;scan.style.opacity=0;vhs.style.opacity=0;}}
+function horrorFX(dt){terrorS+=(terror-terrorS)*Math.min(1,dt*(terror>terrorS?6:2));const t=terrorS;
+  if(t<=.01){setTerror(0);}else{
+    const j=t*t*14;renderer.domElement.style.transform=`translate(${(Math.random()-.5)*j}px,${(Math.random()-.5)*j*.4}px) skewX(${(Math.random()<t*.3?(Math.random()-.5)*t*6:0)}deg)`;
+    const inv=t>.8&&Math.random()<.04;renderer.domElement.style.filter=`contrast(${1+t*.7}) saturate(${1-t*.7}) hue-rotate(${(Math.random()-.5)*t*70}deg)${inv?' invert(1)':''} brightness(${1-t*.15})`;
+    fx.style.opacity=Math.min(.9,t*1.1);scan.style.opacity=t;vhs.style.opacity=t>.3?(Math.random()<.9?1:0):0;vhsClock+=dt;
+    document.getElementById('vhsT').textContent=new Date(vhsClock*1000*37).toISOString().substr(11,8);
+    fxc.clearRect(0,0,240,135);const bands=Math.floor(t*14);for(let i=0;i<bands;i++){const y=Math.random()*135,h=1+Math.random()*6*t;fxc.fillStyle=`rgba(${Math.random()<.5?'255,30,40':'40,230,255'},${.15+Math.random()*.35*t})`;fxc.fillRect((Math.random()-.5)*40*t,y,240,h);}
+    const img=fxc.getImageData(0,0,240,135);const d=img.data;for(let i=0;i<d.length;i+=4){if(Math.random()<t*.18){const v=Math.random()*255;d[i]=d[i+1]=d[i+2]=v;d[i+3]=120*t;}}fxc.putImageData(img,0,0);}
+  const san=player.sanity/100;document.getElementById('vignette').style.opacity=.3+(1-san)*.6+t*.3;
+  const bv=document.getElementById('bloodv');bv.style.opacity=Math.max(0,parseFloat(bv.style.opacity||0)-dt*1.2)+(player.hp<30?.25:0);
+  if(AC&&au.noise){const now=AC.currentTime;au.noise.gain.setTargetAtTime(t*.22,now,.05);au.shriek.gain.setTargetAtTime(t>.7?(t-.7)*.12:0,now,.04);au.shriekOsc.frequency.setTargetAtTime(500+Math.random()*500,now,.02);au.drone.gain.setTargetAtTime(.04+t*.05+(isNight()?.03:0),now,.3);}}
+function updateHUD(){document.querySelector('#hp i').style.width=player.hp+'%';document.querySelector('#sn i').style.width=player.sanity+'%';document.querySelector('#st i').style.width=player.stamina+'%';
+  const hh=Math.floor(dayT*24),mm=Math.floor((dayT*24%1)*60);document.getElementById('clock').textContent=`${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')} ${isNight()?'☾ night':'☀ day'}`;
+  const L=LORE[regionId];document.getElementById('regName').textContent=L?L.name.split(' —')[0]:'';document.getElementById('regSub').textContent=L?L.ring:'';
+  let pr='';if(player.boat)pr='[W/S] pole the sampan · [F] step ashore';else if(nearestSampan())pr='[F] Board the sampan (Xuồng gỗ)';
+  if(player.weapon===2&&player.drawing)pr='Drawing… '+Math.round(player.draw*100)+'%';document.getElementById('prompt').textContent=pr;
+  const w=document.getElementById('warn');w.textContent=warnText;w.style.opacity=warnText?(Math.random()<.85?1:.2):0;w.style.transform=`translateX(calc(-50% + ${(Math.random()-.5)*terrorS*20}px))`;
+  document.getElementById('cross').className=crossT>0?'hit':'';}
+let fpPickT=0;function fpPick(dt){fpPickT+=dt;if(fpPickT<.12)return;fpPickT=0;const r=pickAt(new THREE.Vector2(0,0),140);fpTarget=r;const el=document.getElementById('fptag');
+  if(r&&LORE[r.id]&&r.id!==regionId){el.innerHTML=LORE[r.id].name+' <small>[E] codex</small>';}else if(r&&LORE[r.id]){el.innerHTML='<small>'+LORE[r.id].name.split(' —')[0]+' · [E] codex</small>';}else el.innerHTML='';}
+
+/* =====================================================================
+   AUDIO (procedural)
+   ===================================================================== */
+let AC=null;const au={};
+function initAudio(){if(AC)return;try{AC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){return;}
+  const master=AC.createGain();master.gain.value=.55;master.connect(AC.destination);au.master=master;
+  const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=170;const dg=AC.createGain();dg.gain.value=.04;lp.connect(dg);dg.connect(master);au.drone=dg;
+  [[41,'sawtooth'],[61.7,'sine'],[43.2,'triangle']].forEach(([f,t])=>{const o=AC.createOscillator();o.type=t;o.frequency.value=f;o.connect(lp);o.start();});
+  const buf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate),d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;au.buf=buf;
+  const ns=AC.createBufferSource();ns.buffer=buf;ns.loop=true;const bp=AC.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1700;bp.Q.value=.6;const ng=AC.createGain();ng.gain.value=0;ns.connect(bp);bp.connect(ng);ng.connect(master);ns.start();au.noise=ng;
+  const s=AC.createOscillator();s.type='square';s.frequency.value=620;const sg=AC.createGain();sg.gain.value=0;s.connect(sg);sg.connect(master);s.start();au.shriek=sg;au.shriekOsc=s;}
+function sfx(type){if(!AC)return;const t=AC.currentTime,g=AC.createGain();g.connect(au.master);
+  if(type==='swing'||type==='bite'||type==='hit'){const src=AC.createBufferSource();src.buffer=au.buf;const f=AC.createBiquadFilter();f.type=type==='swing'?'bandpass':'lowpass';
+    f.frequency.setValueAtTime(type==='swing'?500:type==='hit'?400:900,t);if(type==='swing')f.frequency.exponentialRampToValueAtTime(3200,t+.2);
+    g.gain.setValueAtTime(type==='hit'?.6:.35,t);g.gain.exponentialRampToValueAtTime(.001,t+(type==='swing'?.25:.15));src.connect(f);f.connect(g);src.start(t,Math.random());src.stop(t+.3);}
+  else if(type==='twang'){const o=AC.createOscillator();o.type='triangle';o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(90,t+.25);g.gain.setValueAtTime(.3,t);g.gain.exponentialRampToValueAtTime(.001,t+.3);o.connect(g);o.start(t);o.stop(t+.32);}
+  else if(type==='sting'){[233,247,370,523,554].forEach(fq=>{const o=AC.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(fq,t);o.frequency.linearRampToValueAtTime(fq*.94,t+1.6);o.connect(g);o.start(t);o.stop(t+1.7);});
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.12,t+.05);g.gain.exponentialRampToValueAtTime(.001,t+1.6);}}
+
+/* =====================================================================
+   UI BUTTONS / RESIZE
+   ===================================================================== */
+document.getElementById('bAtlas').onclick=()=>{tween={fp:camera.position.clone(),ft:controls.target.clone(),tp:new THREE.Vector3(0,1750,1550),tt:new THREE.Vector3(0,60,0),t:0,dur:1.4};};
+document.getElementById('bDescend').onclick=()=>{initAudio();savedMap={p:camera.position.clone(),t:controls.target.clone()};const x=KRAG.x,z=KRAG.z+30;
+  tween={fp:camera.position.clone(),ft:controls.target.clone(),tp:new THREE.Vector3(x,groundHeight(x,z)+1.7,z),tt:new THREE.Vector3(x+20,groundHeight(x,z)+1.7,z),t:0,dur:2.2,done:()=>enterFP(x,z,-Math.PI/2)};};
+document.getElementById('bLabels').onclick=()=>labelsOn=!labelsOn;
+document.getElementById('bNight').onclick=()=>{mapNight=!mapNight;dayT=mapNight?.03:.42;};
+window.addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();resizeInspector();});
+function updateLabels(){const show=labelsOn&&mode==='map';const el=document.getElementById('labels');el.style.display=show?'block':'none';if(!show)return;const v=new THREE.Vector3();
+  const camD=camera.position.distanceTo(controls.target);
+  for(const L of LABELS){v.copy(L.pos).project(camera);if(v.z>1||Math.abs(v.x)>1.05||Math.abs(v.y)>1.05){L.el.style.display='none';continue;}
+    L.el.style.display='block';L.el.style.opacity=camD<160&&camera.position.distanceTo(L.pos)>900?.25:1;L.el.style.transform=`translate(${(v.x*.5+.5)*innerWidth}px,${(-v.y*.5+.5)*innerHeight}px) translate(-50%,-50%)`;}}
+
+/* =====================================================================
+   MAIN LOOP
+   ===================================================================== */
+const clock=new THREE.Clock();let clockT=0;
+function loop(){requestAnimationFrame(loop);const dt=Math.min(.05,clock.getDelta());clockT+=dt;crossT-=dt;
+  if(tween){tween.t+=dt/tween.dur;const k=ease(Math.min(1,tween.t));camera.position.lerpVectors(tween.fp,tween.tp,k);controls.target.lerpVectors(tween.ft,tween.tt,k);camera.lookAt(controls.target);
+    if(tween.t>=1){const d=tween.done;tween=null;if(d)d();else controls.update();}}
+  if(mode==='map'){if(!tween)controls.update();updateLabels();mapPick(dt);idleAnim(dt);applyLighting(dt);}
+  else{regionId=biomeAt(player.pos.x,player.pos.z);
+    if(!paused&&!dead&&!codexOpen){dayT=(dayT+dt/360)%1;updatePlayer(dt);updateWeapons(dt);updateEntities(dt);updateArrows(dt);fpPick(dt);}
+    else{camera.rotation.set(player.pitch,player.yaw,0);}
+    applyLighting(dt);horrorFX(dt);updateHUD();}
+  renderer.render(scene,camera);if(codexOpen&&insp)renderInspector(dt);}
+
+setTimeout(()=>{buildWorld();LOREPOS.rhoenmouth=P(828,187);buildLegend();applyLighting(1);document.getElementById('loading').style.display='none';loop();},50);
+</script>
+</body>
+</html>
